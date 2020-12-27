@@ -3,11 +3,9 @@
         app
         flat
         dense
-        color="primary" >
-        <div class="d-flex align-center">
-            
-        </div>
-        <v-spacer></v-spacer>
+        color="primary">
+        <div class="d-flex align-center" />
+        <v-spacer />
         <v-btn
             href="#"
             icon>
