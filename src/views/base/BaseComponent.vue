@@ -3,7 +3,14 @@
         <BaseHeader />
         <v-main>
             <Sidebar />
-            <router-view></router-view>
+            <div 
+                id="wrapper" 
+                class="pa-5">
+                <v-fade-transition 
+                    mode="out-in">
+                    <router-view />
+                </v-fade-transition>
+            </div>
         </v-main>
     </div>
 </template>
@@ -29,6 +36,10 @@ export default {
 
         .v-main__wrap {
             display: flex;
+        }
+
+        #wrapper {
+            width: 100%;
         }
     }
 }
