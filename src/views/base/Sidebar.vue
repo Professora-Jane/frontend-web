@@ -1,7 +1,8 @@
 <template>
     <v-navigation-drawer
         width="200"
-        permanent>
+        permanent
+        color="transparent">
         <v-list-item>
             <v-list-item-content>
                 <v-list-item-title class="title">
@@ -42,7 +43,7 @@ export default {
                 {
                     title: "Meus alunos",
                     icon: "mdi-account-multiple",
-                    routeTo: "home",
+                    routeTo: "students",
                     handler: route => this.handleSidebarItem(route)
                 },
                 {
@@ -61,3 +62,9 @@ export default {
     }
 }
 </script>
+
+<style lang="scss">
+.v-navigation-drawer__border {
+    display: none;
+}
+</style>

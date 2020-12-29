@@ -3,22 +3,23 @@
         app
         flat
         dense
-        color="primary">
+        color="transparent">
         <div class="d-flex align-center" />
+        <h2 class="title">
+            {{ title }}
+        </h2>
         <v-spacer />
         <v-btn
             href="#"
             icon>
-            <v-icon 
-                color="white">
+            <v-icon>
                 mdi-bell
             </v-icon>
         </v-btn>
         <v-btn
             href="#"
             icon>
-            <v-icon 
-                color="white">
+            <v-icon>
                 mdi-account
             </v-icon>
         </v-btn>
@@ -27,6 +28,18 @@
 
 <script>
 export default {
-    
+    data() {
+        return {
+            title: undefined
+        }
+    },
+    watch: {
+        '$route': function(value) {
+            this.title = value.meta.title
+        }
+    },
+    created() {
+        this.title = this.$router.currentRoute.meta.title
+    }
 }
 </script>
