@@ -14,12 +14,34 @@ const routes = [
             {
                 path: 'home',
                 name: 'home',
+                meta: {
+                    title: "Home page"
+                },
                 component: () => import(/* webpackChunkName: "home" */ '../views/Home.vue'), 
             },
             {
                 path: 'schedule',
                 name: 'schedule',
+                meta: {
+                    title: "Agenda"
+                },
                 component: () => import(/* webpackChunkName: "home" */ '../views/schedule/Schedule.vue'), 
+            },
+            {
+                path: 'students',
+                name: 'students',
+                meta: {
+                    title: "Estudantes"
+                },
+                component: () => import(/* webpackChunkName: "home" */ '../views/students/Students.vue'), 
+            },
+            {
+                path: 'student/detail/:id',
+                name: 'studentDetails',
+                meta: {
+                    title: "Detalhes do estudante"
+                },
+                component: () => import(/* webpackChunkName: "home" */ '../views/students/StudentDetails.vue'), 
             }
         ]
 	},
