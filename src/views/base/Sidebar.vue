@@ -48,7 +48,7 @@ export default {
                 },
                 {
                     title: "Minhas aulas",
-                    icon: "mdi-google-classroom",
+                    icon: "mdi-calendar-account",
                     routeTo: "schedule",
                     handler: route => this.handleSidebarItem(route)
                 },
