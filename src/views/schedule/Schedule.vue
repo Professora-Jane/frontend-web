@@ -1,33 +1,54 @@
 <template>
-    <div id="schedule">
-        <v-calendar
-            ref="calendar"
-            v-model="value"
-            :weekdays="weekday"
-            :type="type"
-            hide-header
-            :interval-format="intervalFormat"
-            :first-interval="firstInterval"
-            :interval-count="15" />
-    </div>
+    <card-container
+        id="schedule"
+        page-title="Minha agenda">
+        <div class="pa-3">
+            <calendar
+                key="scheduleCalendar"
+                :events="events" />
+        </div>
+    </card-container>
 </template>
 
 <script>
+import { mapState } from "vuex"
+import TeacherService from "../../services/TeacherService"
+import CardContainer from "../../components/base/CardContainer"
+import Calendar from "../../components/schedule/Calendar"
+
+const teacherService = new TeacherService();
+
 export default {
+    components: {
+        CardContainer,
+        Calendar
+    },
     data() {
         return {
-            value: undefined,
-            type: 'week',
-            mode: 'stack',
-            weekday: [0, 1, 2, 3, 4, 5, 6],
             events: [],
-            firstInterval: 6
         }
     },
+    computed: {
+        ...mapState("authUser", [ 'id' ])
+    },
     methods: {
-        intervalFormat(interval) {
-            return interval.time
-        }
-    }
+        async getTeacherClasses() {
+            try {
+                const response = await teacherService.listTeacherClasses({ teacherId: this.id })
+                this.events = response.data;
+            }
+            catch(error) {
+                console.error(error)
+            }
+        },
+        getExpectedVCalendarTime(time) {
+            const hours = time.getMinutes() > 9 ? toString(time.getMinutes()) : "0" + time.getMinutes()
+            return time.toISOString().substring(0,10) + " " + time.getHours() + ":" + hours
+        },
+    },
+    async created() {
+       await this.getTeacherClasses()
+    },
 }
 </script>
+

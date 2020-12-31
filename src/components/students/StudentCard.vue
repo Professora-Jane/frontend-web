@@ -5,12 +5,16 @@
         class="student-item">
         <v-img
             class="student-item_img elevation-1"
-            :src="defaultImg" />
-        <p class="student-item__title">
+            :src="userImg || defaultImg" />
+        <p 
+            v-if="name"
+            class="student-item__title">
             {{ name }}
         </p>
 
-        <p class="student-item__subtitle">
+        <p 
+            v-if="email"
+            class="student-item__subtitle">
             {{ email }}
         </p>
     </div>
