@@ -1,20 +1,24 @@
 <template>
-    <v-card
-        id="students"
-        elevation="2">
-        <v-card-title
-            class="students-title">
-            <div>
-                Meus alunos ({{ students.length }})
-            </div>
+    <card-container
+        id="studentds"
+        :page-title="`Meus alunos (${ students.length })`">
+        <template v-slot:header>
             <v-spacer />
-
-            <v-btn
-                icon
-                depressed>
-                <v-icon>mdi-account-multiple-plus</v-icon>
-            </v-btn>
-        </v-card-title>
+            <v-text-field
+                class="search-student"
+                v-model="searchStudent"
+                label="Buscar aluno"
+                placeholder="Insira o nome ou email do aluno"
+                hide-details
+                dense
+                append-outer-icon="mdi-magnify" />
+            <button-with-tooltip 
+                bottom
+                label="Adicionar"
+                btn-color="transparent"
+                icon="mdi-account-multiple-plus"
+                @click="dialog=true" />
+        </template>
         <div class="students-area">
             <student-card
                 @click="handleStudent"
@@ -23,64 +27,112 @@
                 :key="index"
                 v-bind="student" />
         </div>
-    </v-card>
+        <create-teacher-student-dialog 
+            max-width="400px"
+            :active="dialog"
+            :btn-loading="btnLoading"
+            :error-messages="createTeacherStudentErrorMessage"
+            @addStudent="createTeacherStudent"
+            @close="dialog=false" />
+    </card-container>
 </template>
 
 <script>
 import StudentCard from "../../components/students/StudentCard.vue"
+import StudentService from "../../services/StudentService";
+import { mapState, mapActions } from "vuex"
+import CardContainer from '../../components/base/CardContainer.vue';
+import ButtonWithTooltip from '../../components/utils/ButtonWithTooltip.vue';
+import CreateTeacherStudentDialog from '../../components/students/dialogs/CreateTeacherStudentDialog.vue';
+import TeacherService from '../../services/TeacherService';
+
+const studentService = new StudentService();
+const teacherService = new TeacherService();
 
 export default {
     components: {
-        StudentCard
+        StudentCard,
+        CardContainer,
+        ButtonWithTooltip,
+        CreateTeacherStudentDialog
     },
     data() {
         return {
+            btnLoading: false,
+            dialog: false,
             show: false,
-            students: [
-                {
-
-                    id: "123",
-                    name: "Elias Bernardo",
-                    email: "teste@teste.com"
-                },
-                {
-                    id: "123",
-                    name: "Elias Bernardo",
-                    email: "teste@teste.com"
-                },
-                {
-                    id: "123",
-                    name: "Elias Bernardo",
-                    email: "teste@teste.com"
-                },
-                {
-                    id: "123",
-                    name: "Elias Bernardo",
-                    email: "teste@teste.com"
-                }
-            ]
+            page: 1,
+            limit: 20, 
+            search: "",
+            students: [],
+            createTeacherStudentErrorMessage: "",
+            searchStudent: ""
         }
     },
+    computed: {
+        ...mapState('authUser', [
+            'id'
+        ])
+    },
     methods: {
+        ...mapActions('authUser', [
+            'setId'
+        ]),
         handleStudent({ id }) {
             this.$router.push({ name: "studentDetails", params: { id }})
-        }
-    }
+        },
+        async listStudentsByTeacherId({ teacherId }) {
+            try {
+                const response = await studentService.listStudentsByTeacherId({
+                    page: this.page,
+                    limit: this.limit,
+                    search: this.search,
+                    teacherId
+                })
 
+                this.students = response.data.items
+                this.page = response.data.currentPage
+            }
+            catch(error) {
+                this.students = []
+                this.page = 1
+
+                throw error
+            }
+        },
+        async createTeacherStudent({ studentEmail }) {
+            this.btnLoading = true
+            try {
+                await teacherService.createTeacherStudent({
+                    teacherId: this.id,
+                    studentEmail
+                })
+                
+                await this.listStudentsByTeacherId({ teacherId: this.id })
+                this.dialog = false
+            } 
+            catch (error) {
+                this.createTeacherStudentErrorMessage = error.message
+            }
+            this.btnLoading = false
+        }
+    },
+    async created() {
+        await this.listStudentsByTeacherId({ teacherId: this.id })
+    }
 }
 </script>
 
 <style lang="scss">
 #students {
-    border-radius: 10px;
-
     .students-area {
         display: flex;
         flex-wrap: wrap;
     }
 
-    .students-title {
-        background-color: $bg-light !important;
-    }
+}
+.search-student {
+    max-width: 300px !important;
+    margin-right: 20px;
 }
 </style>
