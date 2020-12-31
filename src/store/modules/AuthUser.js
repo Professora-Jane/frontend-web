@@ -4,9 +4,10 @@ const SET_NAME = "SET_NAME";
 const SET_EMAIL = "SET_EMAIL";
 
 module.exports = {
+    namespaced: true,
     state: () => ({
         token: "",
-        id: "",
+        id: "5fe8996195e39a1af12b0d0c",
         name: "",
         email: "",
     }),
