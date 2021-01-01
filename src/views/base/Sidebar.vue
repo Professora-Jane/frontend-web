@@ -52,6 +52,12 @@ export default {
                     routeTo: "schedule",
                     handler: route => this.handleSidebarItem(route)
                 },
+                {
+                    title: "Sala de aula",
+                    icon: "mdi-google-classroom",
+                    routeTo: "room",
+                    handler: route => this.handleSidebarItem(route)
+                },
             ]
         }
     },

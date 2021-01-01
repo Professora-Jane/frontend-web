@@ -42,6 +42,14 @@ const routes = [
                     title: "Detalhes do estudante"
                 },
                 component: () => import(/* webpackChunkName: "home" */ '../views/students/StudentDetails.vue'), 
+            },
+            {
+                path: 'room',
+                name: 'room',
+                meta: {
+                    title: "Salas de aula"
+                },
+                component: () => import(/* webpackChunkName: "home" */ '../views/room/Room.vue'), 
             }
         ]
 	},
