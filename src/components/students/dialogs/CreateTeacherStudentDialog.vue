@@ -21,7 +21,7 @@
                 @click="closeDialog">
                 Cancelar
             </v-btn>
-            <v-spacer></v-spacer>
+            <v-spacer />
             <v-btn
                 color="green darken-1"
                 text
@@ -34,7 +34,7 @@
 </template>
 
 <script>
-import CardDialog from "../../base/CardDialog.vue"
+import CardDialog from "../../base/dialogs/CardDialog.vue"
 
 export default {
     props: {

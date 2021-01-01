@@ -18,10 +18,15 @@
                 {{ error }}
             </span>
 
-            <v-text-field
+            <v-select
+                item-text="name"
+                item-value="id"
                 v-if="Array.isArray(studentId)"
-                label="Email do aluno"
-                v-model="email" />
+                v-model="email"
+                :items="studentId"
+                label="Aluno"
+                :rules="[v => !!v || 'É necessário informar o aluno']"
+                required />
             
             <v-menu
                 ref="menuStart"
@@ -117,7 +122,7 @@
 </template>
 
 <script>
-import CardDialog from "../../base/CardDialog.vue"
+import CardDialog from "../../base/dialogs/CardDialog.vue"
 
 export default {
     props: {
@@ -177,7 +182,18 @@ export default {
             this.$emit("close")
         },
         addStudent() {
-            if (this.validate()) {
+            if (Array.isArray(this.studentId)) {
+                if (this.validate()) {
+                    this.$emit("createClass", { 
+                        studentId: this.email,
+                        startTime: this.timeStart,
+                        endTime: this.timeEnd,
+                        daysOfWeek: this.weekDays.map(item => item.id),
+                        discipline: this.selectedDiscipline
+                    })
+                }
+            }
+            else if (this.validate()) {
                 this.$emit("createClass", { 
                     studentId: this.studentId,
                     startTime: this.timeStart,
@@ -185,9 +201,6 @@ export default {
                     daysOfWeek: this.weekDays.map(item => item.id),
                     discipline: this.selectedDiscipline
                 })
-            }
-            else {
-                console.error("deu ruim")
             }
         },
         validate () {
