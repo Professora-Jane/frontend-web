@@ -10,7 +10,8 @@
                     bottom
                     label="Remover aluno"
                     btn-color="transparent"
-                    icon="mdi-account-multiple-remove" />
+                    icon="mdi-account-multiple-remove"
+                    @click="dialogDeleteItem = true" />
             </template>
             <div class="d-flex pa-3">
                 <div class="profile-img">
@@ -58,6 +59,15 @@
             :btn-loading="btnLoading"
             :error="createStudentClassError"
             @close="dialog=false" />
+        
+        <delete-item-dialog
+            :active="dialogDeleteItem"
+            title="Excuir aluno"
+            max-width="350px"
+            content="Remover um aluno também irá remover todas as suas aulas. Tem certeza que deseja continuar? Essa ação é irreversível."
+            @delete="deleteStudent"
+            :btn-loading="btnLoadingDeleteStudent"
+            @close="dialogDeleteItem = false" />
     </div>
 </template>
 
@@ -72,7 +82,7 @@ import Calendar from '../../components/schedule/Calendar.vue';
 import { mapState } from "vuex";
 import ButtonWithTooltip from '../../components/utils/ButtonWithTooltip.vue';
 import CreateStudentClass from '../../components/students/dialogs/CreateStudentClass.vue';
-
+import DeleteItemDialog from "../../components/base/dialogs/DeleteItemDialog.vue"
 
 const studentService = new StudentService();
 const teacherService = new TeacherService();
@@ -84,10 +94,12 @@ export default {
         CardContainer,
         Calendar,
         ButtonWithTooltip,
-        CreateStudentClass
+        CreateStudentClass,
+        DeleteItemDialog
     },
     data() {
         return {
+            dialogDeleteItem: false,
             btnLoading: false,
             dialog: false,
             studentId: undefined,
@@ -102,6 +114,7 @@ export default {
             page: 1,
             // TODO remover hardcoded
             limit: 100,
+            btnLoadingDeleteStudent: false,
             events: []
         }
     },
@@ -164,6 +177,23 @@ export default {
                 this.createStudentClassError = error.message
             }
             this.btnLoading = false
+        },
+        async deleteStudent() {
+            this.btnLoadingDeleteStudent = true
+            try {
+                await teacherService.deleteTeacherStudent({
+                    teacherId: this.id,
+                    studentId: this.studentId
+                })
+                this.dialogDeleteItem = false
+                this.$router.push({ name: 'students' })
+            }
+            catch(error) {
+                // TODO notify
+                console.error(error)
+            }
+            this.btnLoadingDeleteStudent = false
+            
         }
     },
     async created() {
