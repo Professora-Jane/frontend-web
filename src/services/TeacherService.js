@@ -35,5 +35,17 @@ export default class TeacherService {
         return response
     }
 
+    /**
+     * 
+     * @param { object } params
+     * @param { string } params.teacherId - ObjectId do professor
+     * @param { string } params.studentId - ObjectId do aluno
+     */
+    async deleteTeacherStudent({ teacherId, studentId  }) {
+        const response = await this.client.delete(`/teacher/student/${teacherId}/${studentId}`)
+
+        return response
+    }
+
 
 }
