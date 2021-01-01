@@ -1,11 +1,11 @@
 <template>
     <v-app-bar
         app
-        :flat="isScrolled"
+        :flat="!isScrolled"
         dense
         id="base-header"
         v-scroll="showScroll"
-        :color="isScrolled ? 'transparent' : 'rgba(255,255,255, 0.9)'">
+        :color="isScrolled ? 'rgba(255,255,255, 0.9)' : 'transparent'">
         <v-container class="d-flex align-center">
             <h2 class="title">
                 {{ title }}
@@ -44,7 +44,7 @@ export default {
     },
     methods: {
         showScroll() {
-            this.isScrolled = document.documentElement.scrollTop < 50
+            this.isScrolled = document.documentElement.scrollTop > 50
         }
     },
     created() {
