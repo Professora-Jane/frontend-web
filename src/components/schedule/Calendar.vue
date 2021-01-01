@@ -14,7 +14,7 @@
         :first-interval="firstInterval"
         @mouseenter:event="highlightClass"
         @mouseleave:event="unhighlightClass"
-        :interval-count="$attrs['interval-count'] || 15">
+        :interval-count="$attrs['interval-count'] || 17">
         <template v-slot:day-body="{ date, week }">
             <div
                 class="v-current-time"
@@ -85,8 +85,9 @@ export default {
             })
         },
         getExpectedVCalendarTime(time) {
+            const date = time.toLocaleString().substring(0,10).split("/")
             const hours = time.getMinutes() > 9 ? toString(time.getMinutes()) : "0" + time.getMinutes()
-            return time.toISOString().substring(0,10) + " " + time.getHours() + ":" + hours
+            return `${date[2]}-${date[1]}-${date[0]} ${time.getHours()}:${hours}`
         },
         updateClasses() {
             this.updatedEvents = (this.events && this.events.length)? this.events.map(item => {
