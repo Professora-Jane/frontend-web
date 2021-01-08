@@ -57,9 +57,12 @@ class SocketClient {
             this.onMessageHandler && this.onMessageHandler(this.ws, ev.data)
         }
 
-        this.ws.onclose = () => {
+        this.ws.onclose = (ev) => {
+            debugger
             this.connected = false
-            if (this.autoReconnect)
+            if (ev.code === 1008)
+                this.onErrorHandler && this.onErrorHandler(ev)
+            else if (this.autoReconnect)
                 this._reconnect()
         }
 

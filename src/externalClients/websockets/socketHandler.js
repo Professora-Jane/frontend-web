@@ -10,11 +10,11 @@ class SocketHandler {
     }
 
     on(ev, cb) {
-        pubsub.subscribe(ev, async (_, value) => await cb(...value))
+        return pubsub.subscribe(ev, async (_, value) => await cb(...value))
     }
 
-    off(cb) {
-        pubsub.unsubscribe(cb)
+    off(token) {
+        pubsub.unsubscribe(token)
     }
 }
 
