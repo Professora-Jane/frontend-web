@@ -3,16 +3,19 @@ import App from './App.vue'
 import router from './router'
 import store from './store'
 import vuetify from './plugins/vuetify';
-import { socketInstance } from './websockets/socketClient';
-import { socketHandlerInstance } from './websockets/socketHandler';
+import { socketInstance } from './externalClients/websockets/socketClient';
+import { socketHandlerInstance } from './externalClients/websockets/socketHandler';
 
 Vue.config.productionTip = false
 
 Vue.prototype.$wsEmit = (eventName, content) => socketInstance.send(eventName, content)
 
 socketInstance
-    .initConnection({ wsServer: "ws://localhost:7112" })
+    .initConnection({ 
+        wsServer: "ws://localhost:7112"
+     })
     .registerOnMessageHandler(socketHandlerInstance.messageHandler)
+    .registerOnErrorHandler(error => console.error(error))
 
 new Vue({
 	router,
