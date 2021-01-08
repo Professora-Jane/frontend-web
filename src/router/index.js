@@ -1,6 +1,5 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
-import BaseComponent from "../views/base/BaseComponent"
 
 
 Vue.use(VueRouter)
@@ -8,8 +7,8 @@ Vue.use(VueRouter)
 const routes = [
 	{
 		path: '/',
-		name: 'Init',
-        component: BaseComponent,
+		name: 'base',
+        component: () => import(/* webpackChunkName: "base_component" */ '../views/base/BaseComponent.vue'),
         children: [
             {
                 path: 'home',
@@ -25,7 +24,7 @@ const routes = [
                 meta: {
                     title: "Agenda"
                 },
-                component: () => import(/* webpackChunkName: "home" */ '../views/schedule/Schedule.vue'), 
+                component: () => import(/* webpackChunkName: "schedule" */ '../views/schedule/Schedule.vue'), 
             },
             {
                 path: 'students',
@@ -33,7 +32,7 @@ const routes = [
                 meta: {
                     title: "Estudantes"
                 },
-                component: () => import(/* webpackChunkName: "home" */ '../views/students/Students.vue'), 
+                component: () => import(/* webpackChunkName: "students" */ '../views/students/Students.vue'), 
             },
             {
                 path: 'student/detail/:id',
@@ -41,7 +40,7 @@ const routes = [
                 meta: {
                     title: "Detalhes do estudante"
                 },
-                component: () => import(/* webpackChunkName: "home" */ '../views/students/StudentDetails.vue'), 
+                component: () => import(/* webpackChunkName: "student_detail" */ '../views/students/StudentDetails.vue'), 
             },
             {
                 path: 'room',
@@ -49,18 +48,32 @@ const routes = [
                 meta: {
                     title: "Salas de aula"
                 },
-                component: () => import(/* webpackChunkName: "home" */ '../views/room/Room.vue'), 
+                component: () => import(/* webpackChunkName: "room" */ '../views/room/Room.vue'), 
             }
         ]
-	},
-	// {
-	//     path: '/about',
-	//     name: 'About',
-	//     // route level code-splitting
-	//     // this generates a separate chunk (about.[hash].js) for this route
-	//     // which is lazy-loaded when the route is visited.
-	//     component: () => import(/* webpackChunkName: "about" */ '../views/About.vue')
-	// }
+    },
+    {
+        path: '/auth',
+		name: 'base_login',
+        component: () => import(/* webpackChunkName: "base_login" */ '../views/auth/BaseLogin.vue'),
+        children: [
+            {
+                path: 'create_teacher',
+                name: 'create_teacher',
+                component: () => import(/* webpackChunkName: "create_teacher" */ '../views/auth/register/RegisterTeacher.vue'), 
+            },
+            {
+                path: 'create_student',
+                name: 'create_student',
+                component: () => import(/* webpackChunkName: "create_student" */ '../views/auth/register/RegisterStudent.vue'), 
+            },
+            {
+                path: 'login',
+                name: 'login',
+                component: () => import(/* webpackChunkName: "login" */ '../views/auth/login/Login.vue'), 
+            },
+        ]
+    }
 ]
 
 const router = new VueRouter({
