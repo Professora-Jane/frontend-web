@@ -1,9 +1,9 @@
 <template>
     <div
         id="box-create-teacher">
-        <h2 class="h5 mb-1 text-uppercase text-center c-primary-dark">
-            Professora Jane
-        </h2>
+        <div class="box-logo">
+            <img :src="logo" />
+        </div>
         
         <div
             class="create-teacher mx-4 mb-4 py-6 px-8 elevation-3">
@@ -11,6 +11,7 @@
                 Login
             </h2>
             <v-form
+                ref="form"
                 lazy-validation>
                 <v-text-field 
                     type="email"
@@ -49,7 +50,8 @@
                 <v-btn
                     class="bg-primary-dark mt-2"
                     depressed
-                    block>
+                    block
+                    @click="doAuth">
                     Confirmar
                 </v-btn>
             </v-form>
@@ -84,6 +86,8 @@
 </template>
 
 <script>
+import { mapActions } from "vuex"
+
 export default {
     data() {
         return {
@@ -92,23 +96,46 @@ export default {
             name: "",
             cellPhone: "",
             email: "",
-            keepLooged: false,
+            keepLooged: true,
             rules: [
                 v => !!v || 'Campo obrigatório',
             ],
             emailRules: [
                 v => /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v) || 'E-mail deve ser válido'
             ],
-            type: "prof",
+            type: "professor",
             types: [
-                { name: "Professor", id: "prof" },
+                { name: "Professor", id: "professor" },
                 { name: "Aluno", id: "aluno" },
             ]
         }
     },
+    computed: {
+        logo() {
+            return require("../../../assets/images/logo_transparent.png")
+        }
+    },
     methods: {
+        ...mapActions('authUser', ['loginUser']),
         routeTo(params) {
             this.$router.push(params)
+        },
+        async doAuth() {
+            if (this.$refs.form.validate()) {
+                try {
+                    await this.loginUser({
+                        email: this.email,
+                        password: this.password,
+                        type: this.type
+                    })
+
+                    
+                    this.routeTo({ name: "schedule"})
+                }
+                catch(error) {
+                    console.error(error)
+                }
+            }
         }
     },
     created() {
@@ -134,6 +161,17 @@ export default {
 
         &:hover {
             text-decoration: underline;
+        }
+    }
+
+    .box-logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 10px;
+
+        img {
+            width: 180px;
         }
     }
 }

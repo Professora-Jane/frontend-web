@@ -1,10 +1,10 @@
 <template>
     <v-main
         id="base-login"> 
-        <v-fade-transition 
+        <v-scroll-x-transition 
             mode="out-in">
             <router-view />
-        </v-fade-transition>
+        </v-scroll-x-transition>
     </v-main>
 </template>
 

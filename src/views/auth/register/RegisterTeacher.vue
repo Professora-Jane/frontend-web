@@ -1,9 +1,9 @@
 <template>
     <div
         id="box-create-teacher">
-        <h2 class="h5 mb-1 text-uppercase text-center c-primary-dark">
-            Professora Jane
-        </h2>
+        <div class="box-logo">
+            <img :src="logo" />
+        </div>
         
         <div
             class="create-teacher mx-4 mb-4 py-6 px-8 elevation-3">
@@ -82,6 +82,11 @@ export default {
             ]
         }
     },
+    computed: {
+        logo() {
+            return require("../../../assets/images/logo_transparent.png")
+        }
+    },
     methods: {
         routeTo(params) {
             this.$router.push(params)
@@ -106,6 +111,17 @@ export default {
         
         &:hover {
             text-decoration: underline;
+        }
+    }
+
+    .box-logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 10px;
+
+        img {
+            width: 180px;
         }
     }
 }

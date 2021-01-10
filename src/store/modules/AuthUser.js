@@ -1,15 +1,22 @@
+import AuthService from "../../services/AuthService";
+import router from "../../router"
+
 const SET_TOKEN = "SET_TOKEN";
 const SET_ID = "SET_ID";
 const SET_NAME = "SET_NAME";
 const SET_EMAIL = "SET_EMAIL";
+const SET_TYPE = "SET_TYPE";
 
-module.exports = {
+const authService = new AuthService();
+
+export default {
     namespaced: true,
     state: () => ({
-        token: "",
-        id: "5fe8996195e39a1af12b0d0c",
-        name: "",
-        email: "",
+        token: localStorage.getItem("userData") && JSON.parse(localStorage.getItem("userData")).token || "",
+        id: localStorage.getItem("userData") && JSON.parse(localStorage.getItem("userData")).id || "",
+        name: localStorage.getItem("userData") && JSON.parse(localStorage.getItem("userData")).name || "",
+        email: localStorage.getItem("userData") && JSON.parse(localStorage.getItem("userData")).email || "",
+        type: localStorage.getItem("userData") && JSON.parse(localStorage.getItem("userData")).type || "",
     }),
     mutations: {
         [SET_TOKEN](state, token) {
@@ -24,6 +31,9 @@ module.exports = {
         [SET_EMAIL](state, email) {
             state.email = email
         },
+        [SET_TYPE](state, type) {
+            state.type = type
+        },
     }, 
     actions: {
         setToken({ commit }, token) {
@@ -36,7 +46,35 @@ module.exports = {
             commit(SET_NAME, name)
         },
         setEmail({ commit }, email) {
-            commit(SET_TOKEN, email)
+            commit(SET_EMAIL, email)
         },
+        setType({ commit }, type) {
+            commit(SET_TYPE, type)
+        },
+
+        logoutUser({ dispatch }) {
+            localStorage.removeItem("userData")
+            dispatch('setToken', '')
+            dispatch('setId', '')
+            dispatch('setEmail', '')
+            dispatch('setType', '')
+            dispatch('setName', '')
+            router.push({ name: "login" })
+        },
+        
+        async loginUser({ dispatch }, { email, type, password }) {
+            const response = await authService.loginUser({ email, type, password })
+            dispatch('setToken', response.data.token)
+            dispatch('setId', response.data.id)
+            dispatch('setName', response.data.name)
+            dispatch('setType', type)
+            dispatch('setEmail', email)
+
+            localStorage.setItem("userData", JSON.stringify({
+                ...response.data,
+                type,
+                email,
+            }))
+        }
     }
 }
