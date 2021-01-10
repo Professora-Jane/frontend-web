@@ -1,4 +1,5 @@
 import axios from "axios";
+import store from "../store";
 
 export default class HttpClientBuilder {
 
@@ -9,15 +10,23 @@ export default class HttpClientBuilder {
         //default interceptor for request
         //TODO : refresh token
         client.interceptors.request.use(config => {
+            const userData = localStorage.getItem("userData")
+            if (!config.headers.authorization && userData)
+            config.headers.authorization = "Bearer " + JSON.parse(userData).token;
+            
             return config;
         });
-
+        
         client.interceptors.response.use(
             res => {
                 return res;
             },
             error => {
-                throw getProblemDetails(error);
+                // TODO refresh token
+                if (error.response.status === 401)
+                    store.dispatch("authUser/logoutUser")
+                else 
+                    throw getProblemDetails(error);
             }
         );
 
