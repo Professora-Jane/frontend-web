@@ -1,5 +1,6 @@
 import AuthService from "../../services/AuthService";
 import router from "../../router"
+import { socketInstance } from "../../externalClients/websockets/socketClient";
 
 const SET_TOKEN = "SET_TOKEN";
 const SET_ID = "SET_ID";
@@ -69,6 +70,11 @@ export default {
             dispatch('setName', response.data.name)
             dispatch('setType', type)
             dispatch('setEmail', email)
+
+            socketInstance.send("connection", {
+                id: response.data.id,
+                type: type
+            })
 
             localStorage.setItem("userData", JSON.stringify({
                 ...response.data,
