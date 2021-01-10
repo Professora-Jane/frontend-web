@@ -39,6 +39,7 @@ class SocketClient {
         this.autoReconnect = true
         this.reconnectTime = 5000
         this.connected = false
+        this.serverConnection = false
     }
 
     initConnection({ wsServer, autoReconnect = true, reconnectTime = 5000 }) {
@@ -54,7 +55,10 @@ class SocketClient {
         }
 
         this.ws.onmessage = (ev) => {
-            this.onMessageHandler && this.onMessageHandler(this.ws, ev.data)
+            if (JSON.parse(ev.data).type === "connectedToServer")
+                this.serverConnection = true
+            else 
+                this.onMessageHandler && this.onMessageHandler(this.ws, ev.data)
         }
 
         this.ws.onclose = (ev) => {
@@ -117,13 +121,18 @@ class SocketClient {
     }
 
     send(event, content) {
-        if (this.connected)
+        if (this.serverConnection)
             this.ws.send(event, content)
         else
             setTimeout(() => this.send(event, content), 2000)
     }
 
-
+    connectToServer({ id, type }) {
+        if (this.connected && !this.serverConnection)
+            this.ws.send("connection", { id, type })
+        else
+            setTimeout(() => this.connectToServer({ id, type }), 500)
+    }
 }
 
 const instance = new SocketClient();
