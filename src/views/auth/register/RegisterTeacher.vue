@@ -2,7 +2,7 @@
     <div
         id="box-create-teacher">
         <div class="box-logo">
-            <img :src="logo" />
+            <img :src="logo">
         </div>
         
         <div
@@ -11,6 +11,7 @@
                 Criar professor
             </h2>
             <v-form
+                ref="form"
                 lazy-validation>
                 <v-text-field 
                     v-model="name"
@@ -30,7 +31,7 @@
                     label="Senha" />
                 
                 <v-text-field 
-                    :rules="rules"
+                    :rules="[...rules, ...repeatPasswordRules]"
                     v-model="repeatPassword"
                     type="password"
                     label="Repita a senha" />
@@ -38,7 +39,8 @@
                 <v-btn
                     class="bg-primary-dark mt-2"
                     depressed
-                    block>
+                    block
+                    @click="registerTeacher">
                     Cadastrar professor
                 </v-btn>
             </v-form>
@@ -67,6 +69,10 @@
 </template>
 
 <script>
+import TeacherService from '../../../services/TeacherService'
+
+const teacherService = new TeacherService()
+
 export default {
     data() {
         return {
@@ -79,6 +85,9 @@ export default {
             ],
             emailRules: [
                 v => /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v) || 'E-mail deve ser válido'
+            ],
+            repeatPasswordRules: [
+                v => v === this.password || "As senhas devem ser iguais"
             ]
         }
     },
@@ -90,6 +99,23 @@ export default {
     methods: {
         routeTo(params) {
             this.$router.push(params)
+        },
+        async registerTeacher() {
+            if (this.$refs.form.validate()) {
+                try {
+                    await teacherService.createTeacher({
+                        name: this.name, 
+                        email: this.email, 
+                        password: this.password,
+                        repeatedPassword: this.repeatPassword
+                    })
+
+                    this.$router.push({ name: "login" })
+                }
+                catch(error) {
+                    alert(error)
+                }
+            }
         }
     }
 }
