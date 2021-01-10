@@ -58,7 +58,6 @@ class SocketClient {
         }
 
         this.ws.onclose = (ev) => {
-            debugger
             this.connected = false
             if (ev.code === 1008)
                 this.onErrorHandler && this.onErrorHandler(ev)
