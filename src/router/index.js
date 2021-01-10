@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
-
+import store from "../store"
 
 Vue.use(VueRouter)
 
@@ -24,6 +24,7 @@ const routes = [
                 meta: {
                     title: "Agenda"
                 },
+                beforeEnter: (to,from, next) => requireTeacherAuth(to, from, next),
                 component: () => import(/* webpackChunkName: "schedule" */ '../views/schedule/Schedule.vue'), 
             },
             {
@@ -32,6 +33,7 @@ const routes = [
                 meta: {
                     title: "Estudantes"
                 },
+                beforeEnter: (to,from, next) => requireTeacherAuth(to, from, next),
                 component: () => import(/* webpackChunkName: "students" */ '../views/students/Students.vue'), 
             },
             {
@@ -40,6 +42,7 @@ const routes = [
                 meta: {
                     title: "Detalhes do estudante"
                 },
+                beforeEnter: (to,from, next) => requireTeacherAuth(to, from, next),
                 component: () => import(/* webpackChunkName: "student_detail" */ '../views/students/StudentDetails.vue'), 
             },
             {
@@ -48,6 +51,16 @@ const routes = [
                 meta: {
                     title: "Salas de aula"
                 },
+                beforeEnter: requireAuth,
+                component: () => import(/* webpackChunkName: "room" */ '../views/room/RoomIndex.vue'), 
+            },
+            {
+                path: 'room/:id',
+                name: 'roomDetail',
+                meta: {
+                    title: "Salas de aula"
+                },
+                beforeEnter: requireAuth,
                 component: () => import(/* webpackChunkName: "room" */ '../views/room/Room.vue'), 
             }
         ]
@@ -75,6 +88,31 @@ const routes = [
         ]
     }
 ]
+
+const requireTeacherAuth = (to, from, next) => {
+    console.log(store.state)
+    if (store.state.authUser.token && store.state.authUser.type === "professor") {
+        next()
+        return
+    }
+    next('/auth/login')
+}
+
+const requireAuth = (to, from, next) => {
+    if (store.state.authUser.token) {
+        next()
+        return
+    }
+    next('/login')
+}
+
+// const requireStudentAuth = (to, from, next) => {
+//     if (store.state.authUser.token && store.state.authUser.type === "aluno") {
+//         next()
+//         return
+//     }
+//     next('/login')
+// }
 
 const router = new VueRouter({
 	mode: 'history',
