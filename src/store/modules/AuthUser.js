@@ -71,7 +71,7 @@ export default {
             dispatch('setType', type)
             dispatch('setEmail', email)
 
-            socketInstance.send("connection", {
+            socketInstance.connectToServer({
                 id: response.data.id,
                 type: type
             })
