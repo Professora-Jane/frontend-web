@@ -105,6 +105,8 @@ import RoomService from '../../services/RoomService'
 import Peer from "simple-peer"
 
 const roomService = new RoomService();
+const peers = {}
+let stream = undefined
 
 export default {
     components: {
@@ -120,13 +122,12 @@ export default {
             roomDetails: {
                 name: ""
             },
+            connectedParticipants: undefined,
             roomId: undefined,
             chatMessages: [],
             chatMessage: "",
             videoGrid: undefined,
             connectionVideo: undefined,
-            peers: {},
-            peer: undefined,
             offer: undefined,
             stream: undefined,
             shareType: undefined
@@ -139,17 +140,23 @@ export default {
         },
         currentRoomFinishedState() {
             return "finalizado"
-        },
+        },        
     },
     methods: {
+        getInitiator(peer) {
+            if (this.id === this.roomDetails.adminId || this.roomDetails.details.currentParticipants.length === 0)
+                return false
+            else {
+                return this.roomDetails.details.currentParticipants.map(item => item.id).includes(peer)
+            }
+        },
         onReceivedPeerOffer({ offer, participantId }) {
-            if (this.id !== participantId && offer) {
-                if (this.peers[participantId])
-                    this.peers[participantId].signal(offer)
-                else  {
-                    this.initPeerConnection({ peerId: participantId })
-                    this.peers[participantId].signal(offer)
-
+            if (offer && peers[participantId]) {
+                if (!peers[participantId].inConnection) {
+                    peers[participantId].signal(offer)
+                }
+                else if (!this.shareType) {
+                    peers[participantId].signal(offer)
                 }
             }
         },
@@ -158,7 +165,6 @@ export default {
         },
         onParticipantJoin(content) {
             this.connectedParticipants = content.currentUsers
-            
             this.chatMessages.push({
                 senderid: content.user.id,
                 name: content.user.name,
@@ -174,6 +180,7 @@ export default {
                 participantId: this.id,
                 offer: this.offer,
                 roomId: this.roomId,
+                sendToSelf: false
             })
         },
         onParticipantLeave(content) {
@@ -199,6 +206,12 @@ export default {
             this.chatMessage = ""
         },
         leavingRoom() {
+            if (this.shareType) {
+                this.stopSharing(this.shareType)
+            }
+
+            Object.keys(peers).map(id => this.destroyPeer(id))
+
             this.$wsEmit('room:leave', {
                 roomId: this.roomId,
                 participantId: this.id
@@ -214,23 +227,22 @@ export default {
                 console.error(error)
             }
         },
-        async stopSharing(type) {
-                
-            Object.keys(this.peers).map(id => {
-                if (id !== this.id) {
-                    this.peers[id].removeStream(this.stream)
-                    this.peers[id].send(`stopSharing-${type}`)
-                }
+        stopSharing(type) {
+            stream.getTracks().forEach(track => track.stop())
+
+            Object.keys(peers).map(id => {
+                peers[id].removeStream(stream)
+                peers[id].send(`stopSharing-${type}`)
             })
 
             document.getElementById(`video-${this.id}`).remove()
 
             this.shareType = undefined
-            this.stream = undefined
+            stream = undefined
         },
         async shareScreen() {
             try {
-                this.stream = await navigator.mediaDevices.getDisplayMedia()
+                stream = await navigator.mediaDevices.getDisplayMedia({audio: true, video: true})
                 this.share("screen")
 
             }
@@ -240,7 +252,7 @@ export default {
         },
         async shareWebCam() {
             try {
-                this.stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
                 this.share("video")
             }
             catch(error) {
@@ -254,44 +266,37 @@ export default {
             video.id = `video-${this.id}` 
             
             video.autoplay = true
-            video.srcObject = this.stream
+            video.srcObject = stream
             video.muted = true
             video.controls = true
             
             video.play()
             
-
-            Object.keys(this.peers).map(id => {
-                if (id !== this.id) {
-                    this.peers[id].addStream(this.stream)
-                }
-            })
+            Object.keys(peers).map(id => peers[id].addStream(stream))
 
             this.shareType = type
         },
         destroyPeer(peerId) {
-            console.log(this.peers)
-            if (this.peers[peerId]) {
-                this.peers[peerId].destroy()
-                delete this.peers[peerId]
+            if (peers[peerId]) {
+                peers[peerId].destroy()
+                delete peers[peerId]
             }
         },
         initPeerConnection({ peerId }) {
 
-            if (!this.peers[peerId]) {
-
-                this.peers[peerId] = new Peer({
-                    initiator: this.id === this.roomDetails.admin
+            if (!peers[peerId]) {
+                console.log(`Initiator::  ${this.getInitiator(peerId)};; peerId ${peerId}`)
+                peers[peerId] = new Peer({
+                    initiator: this.getInitiator(peerId),
+                    ...(!!stream && { stream: stream })
                 })
     
-                this.peers[peerId].on("connect", () => {
+                peers[peerId].on("connect", () => {
                     console.log("Connetado ao peer")
-                    if(this.stream)
-                        this.peers[peerId].addStream(this.stream)
-                        
+                    peers[peerId].inConnection = true
                 })
     
-                this.peers[peerId].on('signal', (data) => {
+                peers[peerId].on('signal', (data) => {
                     if (data.renegotiate || data.transceiverRequest)  {
                         console.log("Renegociando DADOS")
                     }
@@ -299,11 +304,12 @@ export default {
                     this.$wsEmit("room:peerOffer", {
                         roomId: this.roomId,
                         participantId: this.id,
-                        offer: data
+                        offer: data,
+                        sendToSelf: false
                     })
                 })
     
-                this.peers[peerId].on('stream', (stream) => {
+                peers[peerId].on('stream', (stream) => {
                     console.log("stream")
                     const  video = document.createElement('video')                    
                     this.videoGrid.appendChild(video)
@@ -315,8 +321,8 @@ export default {
                     video.play()
 
                 })
-    
-                this.peers[peerId].on('close', () => {
+
+                peers[peerId].on('close', () => {
                     console.log("lost")
                     
                     const videoToRemove = document.getElementById(`video-${peerId}`);
@@ -327,20 +333,24 @@ export default {
                     this.destroyPeer(peerId)
                 })
                 
-                this.peers[peerId].on('data', (data) => {
+                peers[peerId].on('data', (data) => {
                     let ev = data;
                     
                     if (typeof data !== "string")
                         ev = new TextDecoder("utf-8").decode(data)
 
-                    if (ev.includes("stopSharing"))
-                        document.getElementById(`video-${peerId}`).remove()
-                    
+                    if (ev.includes("stopSharing")) {
+                        console.log("Stream removida")
+                        const videoToRemove = document.getElementById(`video-${peerId}`);
+
+                        if (videoToRemove)
+                            videoToRemove.remove()
+                    }
                 })
                 
-                this.peers[peerId].on('error', (err) => {
-                    console.log("Peer deu ruim")
-                    console.log(err)
+                peers[peerId].on('error', () => {
+                    console.log(`Peer deu ruim:: peerId ${peerId}`)
+
                     const videoToRemove = document.getElementById(`video-${peerId}`);
 
                     if (videoToRemove)
@@ -359,12 +369,12 @@ export default {
             this.onReceivedPeerOfferToken = socketHandlerInstance.on('room:peerOffer', this.onReceivedPeerOffer)
         },
         leavingRoomHandlers() {
-            window.removeEventListener("beforeunload", this.leavingRoom)
             socketHandlerInstance.off(this.onReceivedMessageToken)
             socketHandlerInstance.off(this.onParticipantJoinToken)
             socketHandlerInstance.off(this.onParticipantLeaveToken)
             socketHandlerInstance.off(this.onReceivedPeerOfferToken)
             this.leavingRoom()
+            window.removeEventListener("beforeunload", this.leavingRoom)
         }
     },
     async created() {
