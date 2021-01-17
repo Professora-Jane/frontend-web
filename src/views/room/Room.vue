@@ -5,6 +5,33 @@
         <template v-slot:header>
             <v-spacer />
             <button-with-tooltip
+                large
+                bottom
+                v-if="!shareType"
+                label="Compartilhar WebCam"
+                btn-color="transparent"
+                icon="mdi-camera"
+                @click="shareWebCam" />
+            
+            <button-with-tooltip
+                large
+                bottom
+                v-if="!shareType"
+                label="Compartilhar tela"
+                btn-color="transparent"
+                icon="mdi-monitor-share"
+                @click="shareScreen" />
+            
+            <button-with-tooltip
+                large
+                bottom
+                v-if="shareType"
+                label="Cancelar compartilhamento"
+                btn-color="transparent"
+                :icon="shareType === 'screen' ? 'mdi-monitor-off': 'mdi-camera-off'"
+                @click="stopSharing(shareType)" />
+
+            <button-with-tooltip
                 v-if="roomDetails.status === currentRoomOnGoingState && roomDetails.admin === id"
                 large
                 bottom
@@ -101,7 +128,8 @@ export default {
             peers: {},
             peer: undefined,
             offer: undefined,
-            stream: undefined
+            stream: undefined,
+            shareType: undefined
         }
     },
     computed: {
@@ -118,8 +146,11 @@ export default {
             if (this.id !== participantId && offer) {
                 if (this.peers[participantId])
                     this.peers[participantId].signal(offer)
-                else 
-                    setTimeout(() => this.onReceivedPeerOffer({ offer, participantId }), 500)
+                else  {
+                    this.initPeerConnection({ peerId: participantId })
+                    this.peers[participantId].signal(offer)
+
+                }
             }
         },
         onReceivedMessage(content) {
@@ -135,8 +166,9 @@ export default {
                 type: "join"
             })
 
-             if (content.user.id !== this.id)
+            if (content.user.id !== this.id) {
                 this.initPeerConnection({ peerId: content.user.id })
+            }
 
             this.$wsEmit("room:peerOffer", {
                 participantId: this.id,
@@ -153,6 +185,8 @@ export default {
                 content: "Saiu da sala",
                 type: "leave"
             })
+
+            this.destroyPeer(content.user.id)
         },
         sendMessageToRoom() {
             this.$wsEmit('room:chat', {
@@ -180,6 +214,61 @@ export default {
                 console.error(error)
             }
         },
+        async stopSharing(type) {
+                
+            Object.keys(this.peers).map(id => {
+                if (id !== this.id) {
+                    this.peers[id].removeStream(this.stream)
+                    this.peers[id].send(`stopSharing-${type}`)
+                }
+            })
+
+            document.getElementById(`video-${this.id}`).remove()
+
+            this.shareType = undefined
+            this.stream = undefined
+        },
+        async shareScreen() {
+            try {
+                this.stream = await navigator.mediaDevices.getDisplayMedia()
+                this.share("screen")
+
+            }
+            catch(error) {
+                console.error(error)
+            }
+        },
+        async shareWebCam() {
+            try {
+                this.stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                this.share("video")
+            }
+            catch(error) {
+                console.error(error)
+            }
+        },
+        share(type) {
+            const  video = document.createElement('video')                    
+            this.videoGrid.appendChild(video)
+
+            video.id = `video-${this.id}` 
+            
+            video.autoplay = true
+            video.srcObject = this.stream
+            video.muted = true
+            video.controls = true
+            
+            video.play()
+            
+
+            Object.keys(this.peers).map(id => {
+                if (id !== this.id) {
+                    this.peers[id].addStream(this.stream)
+                }
+            })
+
+            this.shareType = type
+        },
         destroyPeer(peerId) {
             console.log(this.peers)
             if (this.peers[peerId]) {
@@ -192,12 +281,14 @@ export default {
             if (!this.peers[peerId]) {
 
                 this.peers[peerId] = new Peer({
-                    initiator: this.id === this.roomDetails.admin,
-                    stream: this.stream
+                    initiator: this.id === this.roomDetails.admin
                 })
     
                 this.peers[peerId].on("connect", () => {
                     console.log("Connetado ao peer")
+                    if(this.stream)
+                        this.peers[peerId].addStream(this.stream)
+                        
                 })
     
                 this.peers[peerId].on('signal', (data) => {
@@ -219,8 +310,10 @@ export default {
     
                     video.id = `video-${peerId}` 
                     video.srcObject = stream
-                    video.autoplay = true
                     video.controls = true
+                    video.muted = true
+                    video.play()
+
                 })
     
                 this.peers[peerId].on('close', () => {
@@ -232,6 +325,17 @@ export default {
                         videoToRemove.remove()
                     
                     this.destroyPeer(peerId)
+                })
+                
+                this.peers[peerId].on('data', (data) => {
+                    let ev = data;
+                    
+                    if (typeof data !== "string")
+                        ev = new TextDecoder("utf-8").decode(data)
+
+                    if (ev.includes("stopSharing"))
+                        document.getElementById(`video-${peerId}`).remove()
+                    
                 })
                 
                 this.peers[peerId].on('error', (err) => {
@@ -277,24 +381,6 @@ export default {
 
             this.videoGrid = document.getElementById("video-container")
 
-            try {
-                this.stream = await navigator.mediaDevices.getDisplayMedia()
-                // this.stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-
-                const  video = document.createElement('video')                    
-                this.videoGrid.appendChild(video)
-
-                video.srcObject = this.stream
-                video.muted = true
-                video.controls = true
-                
-                video.play()
-
-            }
-            catch(error) {
-                console.error(error)
-            }
-
             if (this.roomDetails.details.currentParticipants.length) {
                 this.roomDetails.details.currentParticipants.map(item => {
                     if (item.id != this.id)
@@ -311,7 +397,7 @@ export default {
     },
     beforeDestroy() {
         this.leavingRoomHandlers()
-    }
+    },
 }
 </script>
 
