@@ -128,9 +128,10 @@ export default {
             chatMessage: "",
             videoGrid: undefined,
             connectionVideo: undefined,
-            offer: undefined,
+            lastPeer: undefined,
             stream: undefined,
-            shareType: undefined
+            shareType: undefined,
+            currentParticipants: []
         }
     },
     computed: {
@@ -140,31 +141,30 @@ export default {
         },
         currentRoomFinishedState() {
             return "finalizado"
-        },        
+        },
     },
     methods: {
         getInitiator(peer) {
-            if (this.id === this.roomDetails.adminId || this.roomDetails.details.currentParticipants.length === 0)
-                return false
+            if (this.id === this.roomDetails.admin || this.roomDetails.details.currentParticipants.length === 0)
+                return true
             else {
-                return this.roomDetails.details.currentParticipants.map(item => item.id).includes(peer)
+                return !this.currentParticipants.map(item => item.id).filter(id => id !== this.lastPeer).includes(peer)
             }
         },
         onReceivedPeerOffer({ offer, participantId }) {
             if (offer && peers[participantId]) {
-                if (!peers[participantId].inConnection) {
-                    peers[participantId].signal(offer)
-                }
-                else if (!this.shareType) {
-                    peers[participantId].signal(offer)
-                }
+                peers[participantId].signal(offer)
             }
         },
         onReceivedMessage(content) {
             this.chatMessages.push(content)
         },
         onParticipantJoin(content) {
-            this.connectedParticipants = content.currentUsers
+            this.currentParticipants = content.currentParticipants
+
+            if (content.user.id !== this.roomDetails.admin && content.user.id !== this.id)
+                this.lastPeer = content.user.id
+
             this.chatMessages.push({
                 senderid: content.user.id,
                 name: content.user.name,
@@ -173,18 +173,12 @@ export default {
             })
 
             if (content.user.id !== this.id) {
+                this.lastPeer = content.user.id
                 this.initPeerConnection({ peerId: content.user.id })
             }
-
-            this.$wsEmit("room:peerOffer", {
-                participantId: this.id,
-                offer: this.offer,
-                roomId: this.roomId,
-                sendToSelf: false
-            })
         },
         onParticipantLeave(content) {
-            this.connectedParticipants = content.currentUsers
+            this.currentParticipants = content.currentParticipants
 
             this.chatMessages.push({
                 senderid: content.user.id,
@@ -206,22 +200,24 @@ export default {
             this.chatMessage = ""
         },
         leavingRoom() {
+            this.$wsEmit('room:leave', {
+                roomId: this.roomId,
+                participantId: this.id
+            })
+
             if (this.shareType) {
                 this.stopSharing(this.shareType)
             }
 
             Object.keys(peers).map(id => this.destroyPeer(id))
-
-            this.$wsEmit('room:leave', {
-                roomId: this.roomId,
-                participantId: this.id
-            })
         },
         async getRoomDetails() {
             try {
                 const response = await roomService.getRoomById({ roomId: this.roomId })
 
                 this.roomDetails = response.data
+
+                this.currentParticipants = response.data.details.currentParticipants
             }
             catch(error) {
                 console.error(error)
@@ -288,6 +284,7 @@ export default {
                 console.log(`Initiator::  ${this.getInitiator(peerId)};; peerId ${peerId}`)
                 peers[peerId] = new Peer({
                     initiator: this.getInitiator(peerId),
+                    channelName: this.roomId,
                     ...(!!stream && { stream: stream })
                 })
     
@@ -300,12 +297,12 @@ export default {
                     if (data.renegotiate || data.transceiverRequest)  {
                         console.log("Renegociando DADOS")
                     }
-                    this.offer = data
+
                     this.$wsEmit("room:peerOffer", {
                         roomId: this.roomId,
                         participantId: this.id,
                         offer: data,
-                        sendToSelf: false
+                        to: peerId
                     })
                 })
     
@@ -348,8 +345,9 @@ export default {
                     }
                 })
                 
-                peers[peerId].on('error', () => {
+                peers[peerId].on('error', (error) => {
                     console.log(`Peer deu ruim:: peerId ${peerId}`)
+                    console.log(error)
 
                     const videoToRemove = document.getElementById(`video-${peerId}`);
 
