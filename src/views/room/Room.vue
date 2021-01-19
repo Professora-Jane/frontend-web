@@ -144,6 +144,9 @@ export default {
                 this.lastPeer = content.user.id
                 peerHandlerInstance.initPeerConnection({ peerId: content.user.id })
             }
+            else {
+                this.loading = false
+            }
         },
         onParticipantLeave(content) {
             this.currentParticipants = content.currentParticipants
@@ -224,18 +227,17 @@ export default {
             this.shareType = type
         },
         startHandlers() {
-            window.addEventListener('beforeunload', this.leavingRoom)
-
-            this.onParticipantJoinToken = socketHandlerInstance.on('room:participantJoin', this.onParticipantJoin)
             this.onParticipantLeaveToken = socketHandlerInstance.on('room:participantLeave', this.onParticipantLeave)
+            this.onParticipantJoinToken = socketHandlerInstance.on('room:participantJoin', this.onParticipantJoin)
             this.onReceivedPeerOfferToken = socketHandlerInstance.on('room:peerOffer', this.onReceivedPeerOffer)
+            window.addEventListener('beforeunload', this.leavingRoom)
         },
         leavingRoomHandlers() {
-            socketHandlerInstance.off(this.onParticipantJoinToken)
-            socketHandlerInstance.off(this.onParticipantLeaveToken)
-            socketHandlerInstance.off(this.onReceivedPeerOfferToken)
-            this.leavingRoom()
             window.removeEventListener("beforeunload", this.leavingRoom)
+            socketHandlerInstance.off(this.onReceivedPeerOfferToken)
+            socketHandlerInstance.off(this.onParticipantLeaveToken)
+            socketHandlerInstance.off(this.onParticipantJoinToken)
+            this.leavingRoom()
         },
     },
     async created() {
@@ -311,8 +313,6 @@ export default {
                 participantId: this.id,
                 participantName: this.name
             })
-
-            this.loading = false
         }
     },
     beforeDestroy() {
