@@ -32,11 +32,13 @@ export default {
 <style lang="scss">
 .card-container {
     border-radius: 8px !important;
+    position: relative;
 
-    .students-area {
+    &.v-card {
         display: flex;
-        flex-wrap: wrap;
+        flex-direction: column;
     }
+
 
     .card-container__title {
         background-color: $bg-light !important;

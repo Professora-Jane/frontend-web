@@ -10,6 +10,7 @@
                 depressed
                 @click="emitClicked">
                 <v-icon
+                    :color="$attrs['icon-color']"
                     :small="$attrs['small'] || false"
                     :large="$attrs['large'] || false">
                     {{ icon }}
