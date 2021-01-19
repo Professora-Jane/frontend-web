@@ -3,6 +3,16 @@
         id="room"
         :page-title="roomDetails.name">
         <template v-slot:header>
+            <v-overlay
+                :value="loading"
+                absolute>
+                <v-progress-circular
+                    indeterminate />
+            </v-overlay>
+            <time-counter
+                :off-set="3"
+                :init-time="initTime" />
+
             <v-spacer />
             <button-with-tooltip
                 large
@@ -36,8 +46,9 @@
                 large
                 bottom
                 label="Finalizar aula"
+                icon-color="warning"
                 btn-color="transparent"
-                icon="mdi-calendar-plus" />
+                icon="mdi-door-closed" />
         </template>
         <div v-if="roomDetails.status === currentRoomFinishedState">
             <h5 class="pa-3 subtitle-1">
@@ -46,51 +57,16 @@
         </div>
         <div
             v-else-if="roomDetails.status === currentRoomOnGoingState"
-            class="pa-3">
-            <h2>Teste</h2>
-
+            class="pa-3 h-100 d-flex flex-column">
             <div
-                class="d-flex">
+                class="d-flex h-100">
                 <div
                     id="video-container"
-                    class="video-container elevation-2 mr-2" />
-                <div class="chat-container elevation-2 ml-2">
-                    <div class="chat-content pa-3 pt-2 text-center text-uppercase">
-                        <h3 class="h3">
-                            Chat
-                        </h3>
-                        <div
-                            v-for="(message, index) in chatMessages"
-                            :key="index"
-                            class="d-flex flex-column">
-                            <p
-                                class="body-2 mb-1"
-                                style="text-transform: initial;"
-                                v-if="message.type === 'message'"
-                                :class="message.senderId === id? 'text-right': 'text-left'">
-                                <span class="message-content">{{ message.name }}</span>:: {{ message.content }}
-                            </p>
-                            <p
-                                class="caption text-center mb-0"
-                                v-if="message.type !== 'message'">
-                                {{ message.name }} {{ message.content }}
-                            </p>
-                        </div>
-                    </div>
-                    <hr class="mx-2">
-                    <div class="chat-send pa-3">
-                        <v-text-field
-                            placeholder="Mensagem..."
-                            @keydown.enter="sendMessageToRoom"
-                            v-model="chatMessage" />
-                        <v-btn
-                            color="success"
-                            @click="sendMessageToRoom"
-                            block>
-                            Enviar
-                        </v-btn>
-                    </div>
-                </div>
+                    class="video-container mr-2" />
+                
+                <room-chat-container
+                    :room-id="roomId"
+                    :current-participants="currentParticipants" />
             </div>
         </div>
     </card-container>
@@ -100,38 +76,36 @@
 import { mapState } from "vuex"
 import CardContainer from "../../components/base/CardContainer.vue"
 import ButtonWithTooltip from "../../components/utils/ButtonWithTooltip.vue"
+import RoomChatContainer from "./RoomChatContainer.vue"
+import TimeCounter from "../../components/utils/TimeCounter.vue"
 import { socketHandlerInstance } from "../../externalClients/websockets/socketHandler"
 import RoomService from '../../services/RoomService'
-import Peer from "simple-peer"
+import { peerHandlerInstance } from "../../externalClients/peer/PeerHandler"
+
 
 const roomService = new RoomService();
-const peers = {}
-let stream = undefined
 
 export default {
     components: {
         CardContainer,
         ButtonWithTooltip,
+        TimeCounter,
+        RoomChatContainer
     },
     data() {
         return {
-            onReceivedMessageToken: undefined,
-            onParticipantJoinToken: undefined,
             onParticipantLeaveToken: undefined,
             onReceivedPeerOfferToken: undefined,
             roomDetails: {
                 name: ""
             },
-            connectedParticipants: undefined,
             roomId: undefined,
-            chatMessages: [],
-            chatMessage: "",
             videoGrid: undefined,
-            connectionVideo: undefined,
             lastPeer: undefined,
-            stream: undefined,
             shareType: undefined,
-            currentParticipants: []
+            currentParticipants: [],
+            initTime: -1,
+            loading: false
         }
     },
     computed: {
@@ -147,17 +121,18 @@ export default {
         getInitiator(peer) {
             if (this.id === this.roomDetails.admin || this.roomDetails.details.currentParticipants.length === 0)
                 return true
-            else {
+            else if (peer === this.roomDetails.admin) 
+                return false
+            else 
                 return !this.currentParticipants.map(item => item.id).filter(id => id !== this.lastPeer).includes(peer)
-            }
         },
         onReceivedPeerOffer({ offer, participantId }) {
-            if (offer && peers[participantId]) {
-                peers[participantId].signal(offer)
+            if (offer) {
+                peerHandlerInstance.signalPeer({ 
+                    peerId: participantId,
+                    data: offer
+                })
             }
-        },
-        onReceivedMessage(content) {
-            this.chatMessages.push(content)
         },
         onParticipantJoin(content) {
             this.currentParticipants = content.currentParticipants
@@ -165,39 +140,15 @@ export default {
             if (content.user.id !== this.roomDetails.admin && content.user.id !== this.id)
                 this.lastPeer = content.user.id
 
-            this.chatMessages.push({
-                senderid: content.user.id,
-                name: content.user.name,
-                content: "Se juntou à sala",
-                type: "join"
-            })
-
             if (content.user.id !== this.id) {
                 this.lastPeer = content.user.id
-                this.initPeerConnection({ peerId: content.user.id })
+                peerHandlerInstance.initPeerConnection({ peerId: content.user.id })
             }
         },
         onParticipantLeave(content) {
             this.currentParticipants = content.currentParticipants
 
-            this.chatMessages.push({
-                senderid: content.user.id,
-                name: content.user.name,
-                content: "Saiu da sala",
-                type: "leave"
-            })
-
-            this.destroyPeer(content.user.id)
-        },
-        sendMessageToRoom() {
-            this.$wsEmit('room:chat', {
-                roomId: this.roomId,
-                participantId: this.id,
-                participantName: this.name,
-                messageContent: this.chatMessage
-            })
-
-            this.chatMessage = ""
+            peerHandlerInstance.destroyPeer({ peerId: content.user.id})
         },
         leavingRoom() {
             this.$wsEmit('room:leave', {
@@ -209,7 +160,7 @@ export default {
                 this.stopSharing(this.shareType)
             }
 
-            Object.keys(peers).map(id => this.destroyPeer(id))
+            peerHandlerInstance.reInitializeHandlersAndPeers()
         },
         async getRoomDetails() {
             try {
@@ -224,21 +175,21 @@ export default {
             }
         },
         stopSharing(type) {
-            stream.getTracks().forEach(track => track.stop())
+            peerHandlerInstance.stream.getTracks().forEach(track => track.stop())
 
-            Object.keys(peers).map(id => {
-                peers[id].removeStream(stream)
-                peers[id].send(`stopSharing-${type}`)
+            Object.keys(peerHandlerInstance.peers).map(id => {
+                peerHandlerInstance.peers[id].removeStream(peerHandlerInstance.stream)
+                peerHandlerInstance.peers[id].send(`stopSharing-${type}`)
             })
 
             document.getElementById(`video-${this.id}`).remove()
 
             this.shareType = undefined
-            stream = undefined
+            peerHandlerInstance.stream = undefined
         },
         async shareScreen() {
             try {
-                stream = await navigator.mediaDevices.getDisplayMedia({audio: true, video: true})
+                peerHandlerInstance.stream = await navigator.mediaDevices.getDisplayMedia({audio: true, video: true})
                 this.share("screen")
 
             }
@@ -248,7 +199,7 @@ export default {
         },
         async shareWebCam() {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                peerHandlerInstance.stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
                 this.share("video")
             }
             catch(error) {
@@ -262,42 +213,49 @@ export default {
             video.id = `video-${this.id}` 
             
             video.autoplay = true
-            video.srcObject = stream
+            video.srcObject = peerHandlerInstance.stream
             video.muted = true
             video.controls = true
             
             video.play()
             
-            Object.keys(peers).map(id => peers[id].addStream(stream))
+            Object.keys(peerHandlerInstance.peers).map(id => peerHandlerInstance.peers[id].addStream(peerHandlerInstance.stream))
 
             this.shareType = type
         },
-        destroyPeer(peerId) {
-            if (peers[peerId]) {
-                peers[peerId].destroy()
-                delete peers[peerId]
-            }
+        startHandlers() {
+            window.addEventListener('beforeunload', this.leavingRoom)
+
+            this.onParticipantJoinToken = socketHandlerInstance.on('room:participantJoin', this.onParticipantJoin)
+            this.onParticipantLeaveToken = socketHandlerInstance.on('room:participantLeave', this.onParticipantLeave)
+            this.onReceivedPeerOfferToken = socketHandlerInstance.on('room:peerOffer', this.onReceivedPeerOffer)
         },
-        initPeerConnection({ peerId }) {
+        leavingRoomHandlers() {
+            socketHandlerInstance.off(this.onParticipantJoinToken)
+            socketHandlerInstance.off(this.onParticipantLeaveToken)
+            socketHandlerInstance.off(this.onReceivedPeerOfferToken)
+            this.leavingRoom()
+            window.removeEventListener("beforeunload", this.leavingRoom)
+        },
+    },
+    async created() {
+        this.roomId = this.$route.params.id
+    },
+    async mounted() {
+        this.loading = true
+        
+        await this.getRoomDetails()
 
-            if (!peers[peerId]) {
-                console.log(`Initiator::  ${this.getInitiator(peerId)};; peerId ${peerId}`)
-                peers[peerId] = new Peer({
-                    initiator: this.getInitiator(peerId),
-                    channelName: this.roomId,
-                    ...(!!stream && { stream: stream })
-                })
-    
-                peers[peerId].on("connect", () => {
-                    console.log("Connetado ao peer")
-                    peers[peerId].inConnection = true
-                })
-    
-                peers[peerId].on('signal', (data) => {
-                    if (data.renegotiate || data.transceiverRequest)  {
-                        console.log("Renegociando DADOS")
-                    }
+        if (this.roomDetails.status === "criado") {
+            this.$router.push({ name: "room" })
+        }
+        else if (this.roomDetails.status === this.currentRoomOnGoingState) {
+            this.initTime = Math.abs(new Date() - new Date(this.roomDetails.startTime))
 
+            this.startHandlers()
+            
+            peerHandlerInstance
+                .registerOnSignalHandler((data,peerId) => {
                     this.$wsEmit("room:peerOffer", {
                         roomId: this.roomId,
                         participantId: this.id,
@@ -305,9 +263,7 @@ export default {
                         to: peerId
                     })
                 })
-    
-                peers[peerId].on('stream', (stream) => {
-                    console.log("stream")
+                .registerOnStreamHandler((stream, peerId) => {
                     const  video = document.createElement('video')                    
                     this.videoGrid.appendChild(video)
     
@@ -316,83 +272,37 @@ export default {
                     video.controls = true
                     video.muted = true
                     video.play()
-
                 })
-
-                peers[peerId].on('close', () => {
-                    console.log("lost")
-                    
+                .registerOnCloseHandler((peerId) => {
                     const videoToRemove = document.getElementById(`video-${peerId}`);
 
                     if (videoToRemove)
                         videoToRemove.remove()
-                    
-                    this.destroyPeer(peerId)
                 })
-                
-                peers[peerId].on('data', (data) => {
-                    let ev = data;
-                    
-                    if (typeof data !== "string")
-                        ev = new TextDecoder("utf-8").decode(data)
-
+                .registerOnDataHandler((ev, peerId) => {
                     if (ev.includes("stopSharing")) {
-                        console.log("Stream removida")
                         const videoToRemove = document.getElementById(`video-${peerId}`);
 
                         if (videoToRemove)
                             videoToRemove.remove()
                     }
                 })
-                
-                peers[peerId].on('error', (error) => {
-                    console.log(`Peer deu ruim:: peerId ${peerId}`)
-                    console.log(error)
-
+                .registerOnErrorHandler((error, peerId) => {
+                    console.error(error)
                     const videoToRemove = document.getElementById(`video-${peerId}`);
 
                     if (videoToRemove)
                         videoToRemove.remove()
-                    
-                    this.destroyPeer(peerId)
                 })
-            }
-        },
-        startHandlers() {
-            window.addEventListener('beforeunload', this.leavingRoom)
+                .registerInitiatorHandler(peerId => this.getInitiator(peerId));
 
-            this.onReceivedMessageToken = socketHandlerInstance.on('room:chat', this.onReceivedMessage)
-            this.onParticipantJoinToken = socketHandlerInstance.on('room:participantJoin', this.onParticipantJoin)
-            this.onParticipantLeaveToken = socketHandlerInstance.on('room:participantLeave', this.onParticipantLeave)
-            this.onReceivedPeerOfferToken = socketHandlerInstance.on('room:peerOffer', this.onReceivedPeerOffer)
-        },
-        leavingRoomHandlers() {
-            socketHandlerInstance.off(this.onReceivedMessageToken)
-            socketHandlerInstance.off(this.onParticipantJoinToken)
-            socketHandlerInstance.off(this.onParticipantLeaveToken)
-            socketHandlerInstance.off(this.onReceivedPeerOfferToken)
-            this.leavingRoom()
-            window.removeEventListener("beforeunload", this.leavingRoom)
-        }
-    },
-    async created() {
-        this.roomId = this.$route.params.id
-    },
-    async mounted() {
-        await this.getRoomDetails()
-
-        if (this.roomDetails.status === "criado") {
-            this.$router.push({ name: "room" })
-        }
-        else if (this.roomDetails.status === this.currentRoomOnGoingState) {
-            this.startHandlers()
 
             this.videoGrid = document.getElementById("video-container")
 
             if (this.roomDetails.details.currentParticipants.length) {
                 this.roomDetails.details.currentParticipants.map(item => {
                     if (item.id != this.id)
-                        this.initPeerConnection({ peerId: item.id })
+                        peerHandlerInstance.initPeerConnection({ peerId: item.id })
                 })
             }
 
@@ -401,6 +311,8 @@ export default {
                 participantId: this.id,
                 participantName: this.name
             })
+
+            this.loading = false
         }
     },
     beforeDestroy() {
@@ -411,10 +323,12 @@ export default {
 
 <style lang="scss">
 #room {
+    height: 100%;
+
     .video-container {
         width: 100%;
         display: grid;
-        grid-template-columns: repeat(auto-fill, 300px);
+        grid-template-columns: repeat(auto-fill, 400px);
         grid-auto-rows: 300px;
 
         video {
@@ -426,11 +340,6 @@ export default {
 
     .chat-container {
         width: 350px;
-
-        .message-content {
-            margin-right: 5px;
-            font-weight: bold;
-        }
     }
 }
 </style>

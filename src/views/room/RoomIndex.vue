@@ -9,7 +9,7 @@
                 bottom
                 label="Criar sala de aula"
                 btn-color="transparent"
-                icon="mdi-calendar-plus" />
+                icon="mdi-plus" />
         </template>
         <div class="pa-3">
             <h2
@@ -97,10 +97,6 @@ export default {
         },
     },
     methods: {
-        onReceivedMessage(content) {
-            console.log("Recenbo conteúdo via listener")
-            console.log(content)
-        },
         async getCurrentRoom() {
             try {
                 const response = await roomService.getCurrentRoom({ adminId: this.id })
