@@ -33,20 +33,11 @@
                         </v-icon>
                     </v-btn>
                 </template>
-                <div 
-                    class="d-flex py-2 px-3 align-center">
-                    <img 
-                        class="header-profile-img"
-                        :src="userImg">
-                    <div>
-                        <p class="body-2 mb-0">
-                            {{ name }}
-                        </p>
-                        <p class="caption mb-0">
-                            {{ email }}
-                        </p>
-                    </div>
-                </div>
+                <user-profile-card
+                    class="d-flex py-2 px-3 align-center"
+                    :name="name"
+                    :email="email"
+                    :user-img="userImg" />
                 <v-divider />
                 <v-list>
                     <!-- <v-list-item
@@ -82,8 +73,10 @@
 
 <script>
 import { mapState, mapActions } from "vuex"
+import UserProfileCard from '../../components/utils/UserProfileCard.vue'
 
 export default {
+  components: { UserProfileCard },
     data() {
         return {
             title: undefined,
@@ -140,26 +133,6 @@ export default {
 #base-header {
     .user-settings {
         background: $c-white;
-
-        .header-profile-img {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            margin-right: 10px;
-        }
-
-        .header-list-item {
-            cursor: pointer;
-            transition: all 0.2s ease-out;
-
-            &:hover {
-                background: rgba(0, 0, 0, 0.1);
-            }
-
-            .v-list-item__title {
-                line-height: 1.5;
-            }
-        }
     }
 }
 </style>
