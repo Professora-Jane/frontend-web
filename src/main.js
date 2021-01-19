@@ -5,6 +5,7 @@ import store from './store'
 import vuetify from './plugins/vuetify';
 import { socketInstance } from './externalClients/websockets/socketClient';
 import { socketHandlerInstance } from './externalClients/websockets/socketHandler';
+import VueDraggableResizable from 'vue-draggable-resizable'
 
 socketInstance
     .initConnection({ 
@@ -17,6 +18,7 @@ socketInstance
 
 Vue.prototype.$wsEmit = (eventName, content) => socketInstance.send(eventName, content)
 
+Vue.component('vue-draggable-resizable', VueDraggableResizable)
 
 new Vue({
 	router,
