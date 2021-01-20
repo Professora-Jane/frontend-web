@@ -7,13 +7,18 @@ export default {
     props: {
         initTime: {
             required: false,
-            type: Number,
-            default: -1
+            type: String,
+            default: ""
         },
         offSet: {
             type: Number,
             required: false,
             default: 0
+        },
+        initWithoutWatch: {
+            type: Boolean,
+            defaul: false,
+            required: false
         }
     },
     data() {
@@ -26,24 +31,42 @@ export default {
         }
     },
     methods: {
+        pad(val) {
+            return val > 9 ? val : "0" + val;
+        },
+
+        updateTime() {
+            this.seconds = this.pad(parseInt(++this.init%60));
+            this.minutes = this.pad(parseInt(this.init/60,10)%60);
+            this.hours = this.pad(parseInt(this.init/3600,10));
+        },
         countTime() {
-            function pad ( val ) { return val > 9 ? val : "0" + val; }
+            this.updateTime()
+
             setInterval(() => {
-                this.seconds = pad(parseInt(++this.init%60));
-                this.minutes = pad(parseInt(this.init/60,10)%60);
-                this.hours = pad(parseInt(this.init/3600,10));
+                this.updateTime()
             }, 1000);
+        },
+        initCounter(val) {
+            const initTime = Math.abs(new Date() - new Date(val))
+            this.init = (initTime/1000) - (this.offSet * 60 * 60)
+            this.countTime()
+            this.count = true
         }
     },
     watch: {
         initTime: function(val) {
             if(val) {
-                console.log(val)
-                this.countTime()
-                this.count = true
-                this.init = (val/1000) - (this.offSet * 60 * 60)
+                this.initCounter(val)
+            }
+            else {
+                this.count = false
             }
         }
+    },
+    mounted() {
+        if (this.initWithoutWatch)
+            this.initCounter(this.initTime)
     }
 }
 </script>
