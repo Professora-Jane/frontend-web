@@ -5,7 +5,7 @@
         persistent>
         <v-card>
             <v-card-title 
-                class="headline">
+                class="headline card-title">
                 <slot name="header" />
             </v-card-title>
 
@@ -46,6 +46,8 @@ export default {
 
 <style lang="scss">
 .v-card__title {
-    background-color: #f9fafd !important;
+    &.card-title {
+        background-color: #f9fafd !important;
+    }
 }
 </style>

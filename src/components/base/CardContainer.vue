@@ -4,6 +4,12 @@
         :id="$attrs['id']"
         class="card-container"
         elevation="2">
+        <v-overlay
+            :value="loading"
+            absolute>
+            <v-progress-circular
+                indeterminate />
+        </v-overlay>
         <v-card-title
             class="card-container__title">
             <div>
@@ -24,6 +30,11 @@ export default {
         pageTitle: {
             type: String,
             required: true
+        },
+        loading: {
+            type: Boolean,
+            required: false,
+            default: false
         }
     }
 }
