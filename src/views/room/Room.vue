@@ -1,23 +1,18 @@
 <template>
     <card-container
         id="room"
+        :loading="loading"
         :page-title="roomDetails.name">
         <template v-slot:header>
-            <v-overlay
-                :value="loading"
-                absolute>
-                <v-progress-circular
-                    indeterminate />
-            </v-overlay>
             <time-counter
                 :off-set="3"
-                :init-time="initTime" />
+                :init-time="roomDetails.startTime" />
 
             <v-spacer />
             <button-with-tooltip
                 large
                 bottom
-                v-if="!shareType"
+                v-if="!shareType && roomDetails.status === currentRoomOnGoingState"
                 label="Compartilhar WebCam"
                 btn-color="transparent"
                 icon="mdi-camera"
@@ -26,7 +21,7 @@
             <button-with-tooltip
                 large
                 bottom
-                v-if="!shareType"
+                v-if="!shareType && roomDetails.status === currentRoomOnGoingState"
                 label="Compartilhar tela"
                 btn-color="transparent"
                 icon="mdi-monitor-share"
@@ -48,11 +43,12 @@
                 label="Finalizar aula"
                 icon-color="warning"
                 btn-color="transparent"
-                icon="mdi-door-closed" />
+                icon="mdi-door-closed"
+                @click="dialogFinishRoom = true" />
         </template>
         <div v-if="roomDetails.status === currentRoomFinishedState">
             <h5 class="pa-3 subtitle-1">
-                Sala fechada. Caso isso seja um erro entre em contato com o criador da sala.
+                Sala encerrada. Caso isso seja um erro entre em contato com o criador da sala.
             </h5>
         </div>
         <div
@@ -69,6 +65,15 @@
                     :current-participants="currentParticipants" />
             </div>
         </div>
+
+        <confirm-dialog
+            :active="dialogFinishRoom"
+            title="Encerrar aula"
+            max-width="350px"
+            content="Tem certeza que deseja continuar? Essa ação é irreversível."
+            @confirm="finishRoom"
+            :btn-loading="btnLoadingFinishingRoom"
+            @close="dialogFinishRoom = false" />
     </card-container>
 </template>
 
@@ -76,6 +81,7 @@
 import { mapState } from "vuex"
 import CardContainer from "../../components/base/CardContainer.vue"
 import ButtonWithTooltip from "../../components/utils/ButtonWithTooltip.vue"
+import ConfirmDialog from "../../components/base/dialogs/ConfirmDialog.vue"
 import RoomChatContainer from "./RoomChatContainer.vue"
 import TimeCounter from "../../components/utils/TimeCounter.vue"
 import { socketHandlerInstance } from "../../externalClients/websockets/socketHandler"
@@ -90,14 +96,17 @@ export default {
         CardContainer,
         ButtonWithTooltip,
         TimeCounter,
-        RoomChatContainer
+        RoomChatContainer,
+        ConfirmDialog
     },
     data() {
         return {
             onParticipantLeaveToken: undefined,
             onReceivedPeerOfferToken: undefined,
+            onFinishRoomToken: undefined,
             roomDetails: {
-                name: ""
+                name: "",
+                startTime: ""
             },
             roomId: undefined,
             videoGrid: undefined,
@@ -105,7 +114,9 @@ export default {
             shareType: undefined,
             currentParticipants: [],
             initTime: -1,
-            loading: false
+            loading: false,
+            btnLoadingFinishingRoom: false,
+            dialogFinishRoom: false
         }
     },
     computed: {
@@ -119,7 +130,7 @@ export default {
     },
     methods: {
         getInitiator(peer) {
-            if (this.id === this.roomDetails.admin || this.roomDetails.details.currentParticipants.length === 0)
+            if (this.id === this.roomDetails.admin)
                 return true
             else if (peer === this.roomDetails.admin) 
                 return false
@@ -148,6 +159,9 @@ export default {
                 this.loading = false
             }
         },
+        async onFinishRoom() {
+            this.$router.push({ name: "room"})
+        },
         onParticipantLeave(content) {
             this.currentParticipants = content.currentParticipants
 
@@ -171,11 +185,20 @@ export default {
 
                 this.roomDetails = response.data
 
-                this.currentParticipants = response.data.details.currentParticipants
+                this.currentParticipants = response.data?.details?.currentParticipants
             }
             catch(error) {
                 console.error(error)
             }
+        },
+        async finishRoom() {
+            try {
+                await roomService.finishRoom({ roomId: this.roomId })
+            }
+            catch(error) {
+                console.error(error)
+            }
+            this.dialogFinishRoom = false
         },
         stopSharing(type) {
             peerHandlerInstance.stream.getTracks().forEach(track => track.stop())
@@ -230,13 +253,16 @@ export default {
             this.onParticipantLeaveToken = socketHandlerInstance.on('room:participantLeave', this.onParticipantLeave)
             this.onParticipantJoinToken = socketHandlerInstance.on('room:participantJoin', this.onParticipantJoin)
             this.onReceivedPeerOfferToken = socketHandlerInstance.on('room:peerOffer', this.onReceivedPeerOffer)
+            this.onFinishRoomToken = socketHandlerInstance.on('room:finish', this.onFinishRoom)
             window.addEventListener('beforeunload', this.leavingRoom)
         },
         leavingRoomHandlers() {
+            peerHandlerInstance.reInitializeHandlersAndPeers()
             window.removeEventListener("beforeunload", this.leavingRoom)
             socketHandlerInstance.off(this.onReceivedPeerOfferToken)
             socketHandlerInstance.off(this.onParticipantLeaveToken)
             socketHandlerInstance.off(this.onParticipantJoinToken)
+            socketHandlerInstance.off(this.onFinishRoomToken)
             this.leavingRoom()
         },
     },
@@ -252,8 +278,6 @@ export default {
             this.$router.push({ name: "room" })
         }
         else if (this.roomDetails.status === this.currentRoomOnGoingState) {
-            this.initTime = Math.abs(new Date() - new Date(this.roomDetails.startTime))
-
             this.startHandlers()
             
             peerHandlerInstance
@@ -313,6 +337,9 @@ export default {
                 participantId: this.id,
                 participantName: this.name
             })
+        }
+        else {
+            this.loading = false
         }
     },
     beforeDestroy() {

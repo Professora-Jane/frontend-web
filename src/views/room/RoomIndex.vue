@@ -1,7 +1,8 @@
 <template>
     <card-container
-        id="room"
-        page-title="Salas de aula">
+        id="room-index"
+        page-title="Salas de aula"
+        :loading="loading">
         <template v-slot:header>
             <v-spacer />
             <button-with-tooltip
@@ -9,43 +10,91 @@
                 bottom
                 label="Criar sala de aula"
                 btn-color="transparent"
-                icon="mdi-plus" />
+                icon="mdi-plus"
+                @click="createRoomDialog = true" />
         </template>
         <div class="pa-3">
-            <h2
-                class="title">
-                Sala atual
-            </h2>
-            <div>
-                <div
-                    class="current-room" 
-                    v-if="currentRoom">
-                    <div>
-                        {{ currentRoom.name }}
-                    </div>
+            <v-row>
+                <v-col
+                    sm="12"
+                    md="6"
+                    lg="6">
+                    <v-card
+                        class="h-100"
+                        outlined
+                        :elevation="0">
+                        <v-card-title>
+                            Sala atual
+                        </v-card-title>
+                        <v-card-text
+                            class="current-room" 
+                            v-if="currentRoom && currentRoom.status">
+                            <span>Nome da sala:</span> {{ currentRoom.name }} <br>
+                            <span>Id da sala:</span> {{ currentRoom.id }} <br>
+                            <span>Data de criação:</span> {{ new Date(currentRoom.creationDate).toLocaleString('pt-br', { timeZone: 'UTC' }) }} <br>
+                            <span v-if="currentRoom && currentRoom.status === currentRoomOnGoingState">
+                                <span>Duração: </span>
+                                <time-counter
+                                    init-without-watch
+                                    :off-set="3"
+                                    ref="counter"
+                                    :init-time="currentRoom.startTime" />
+                            </span>
+                        </v-card-text>
+                        <v-card-text v-else>
+                            Nenhuma sala atual
+                        </v-card-text>
+                        <v-card-actions>
+                            <v-btn
+                                color="success"
+                                text
+                                @click="startRoom"
+                                v-if="currentRoom && currentRoom.status === currentRoomCreatedState">
+                                Iniciar sala
+                            </v-btn>
+                            <v-btn
+                                color="success"
+                                text
+                                @click="gotoRoom(currentRoom.id)"
+                                v-if="currentRoom && currentRoom.status === currentRoomOnGoingState">
+                                Ir até a sala
+                            </v-btn>
+                            <v-btn
+                                text
+                                color="warning"
+                                v-if="currentRoom && currentRoom.status === currentRoomOnGoingState">
+                                Finalizar sala
+                            </v-btn>
+                        </v-card-actions>
+                    </v-card>
+                </v-col>
+                <v-col
+                    sm="12"
+                    md="6"
+                    lg="6">
+                    <v-card
+                        outlined
+                        :elevation="0">
+                        <v-card-title>
+                            Entrar em uma sala
+                        </v-card-title>
+                        <v-card-text class="d-flex align-center">
+                            <v-text-field 
+                                v-model="roomId"
+                                max-width="300px"
+                                class="mr-8"
+                                label="Id da sala"
+                                placeholder="Insira o id da sala" />
 
-                    <v-btn
-                        color="success"
-                        @click="startRoom"
-                        v-if="currentRoom.status === currentRoomCreatedState">
-                        Iniciar sala
-                    </v-btn>
-                    <v-btn
-                        color="success"
-                        @click="gotoRoom(currentRoom.id)"
-                        v-if="currentRoom.status === currentRoomOnGoingState">
-                        Ir até a sala
-                    </v-btn>
-                    <v-btn
-                        color="danger"
-                        v-if="currentRoom.status === currentRoomFinishedState">
-                        Finalizar sala
-                    </v-btn>
-                </div>
-                <div v-else>
-                    Nenhuma sala atual
-                </div>
-            </div>
+                            <v-btn
+                                @click="gotoRoom(roomId)"
+                                color="success">
+                                Entrar
+                            </v-btn>
+                        </v-card-text>
+                    </v-card>
+                </v-col>
+            </v-row>
             
             <h2
                 class="mt-4 title">
@@ -62,14 +111,22 @@
                 Nenhuma sala anterior
             </div>
         </div>
+
+        <create-room-dialog 
+            max-width="350px"
+            :active="createRoomDialog"
+            @close="createRoomDialog = false"
+            @confirm="createRoom" />
     </card-container>
 </template>
 
 <script>
 import { mapState } from "vuex"
 import CardContainer from "../../components/base/CardContainer.vue"
+import CreateRoomDialog from '../../components/room/dialogs/CreateRoomDialog.vue'
 import ButtonWithTooltip from "../../components/utils/ButtonWithTooltip.vue"
 import RoomService from "../../services/RoomService"
+import TimeCounter from "../../components/utils/TimeCounter.vue"
 
 const roomService = new RoomService();
 
@@ -77,11 +134,20 @@ export default {
     components: {
         CardContainer,
         ButtonWithTooltip,
+        CreateRoomDialog,
+        TimeCounter
     },
     data() {
         return {
-            currentRoom: undefined,
-            pastRooms: []
+            currentRoom: {
+                status: undefined,
+                startTime: "",
+                name: ""
+            },
+            roomId: "",
+            pastRooms: [],
+            createRoomDialog: false,
+            loading: false
         }
     },
     computed: {
@@ -128,14 +194,37 @@ export default {
                 console.error(error)
             }
         },
+        async createRoom({ roomName }) {
+            this.loading = true
+            try {
+                const response = await roomService.createRoom({
+                    adminId: this.id,
+                    roomName
+                })
+
+                console.log(response)
+
+                await this.getCurrentRoom()
+                await this.listFinishedRooms()
+
+                this.createRoomDialog = false
+
+            } catch(error) {
+                console.error(error)
+            }
+
+            this.loading = false
+        },
         gotoRoom(roomId) {
             this.$router.push({ name: "roomDetail", params: { id: roomId }})
         }
     },
     async created() {
+        this.loading = true
         await this.getCurrentRoom()
         await this.listFinishedRooms()
-    }
+        this.loading = false
+    },
 }
 </script>
 

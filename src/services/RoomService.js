@@ -49,11 +49,36 @@ export default class RoomService {
     /**
      * 
      * @param { object } params 
+     * @param { string } params.adminId - ObjectId do admin da sala
+     * @param { string } params.roomName - Nome da sala
+     */
+    async createRoom({ adminId, roomName }) {
+        
+        const response = await this.client.post(`/room`, { adminId, name : roomName})
+
+        return response
+    }
+
+    /**
+     * 
+     * @param { object } params 
      * @param { string } params.roomId - ObjectId da sala
      */
     async startRoom({ roomId }) {
         
         const response = await this.client.put(`/room/start/${roomId}`)
+
+        return response
+    }
+    
+    /**
+     * 
+     * @param { object } params 
+     * @param { string } params.roomId - ObjectId da sala
+     */
+    async finishRoom({ roomId }) {
+        
+        const response = await this.client.put(`/room/finish/${roomId}`)
 
         return response
     }
