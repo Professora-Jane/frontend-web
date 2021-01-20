@@ -71,7 +71,7 @@ export default {
         },
         confirmDeletion() {
             if (this.$refs.form.validate())
-                this.$emit('delete')
+                this.$emit('confirm')
         }
     }
 }
