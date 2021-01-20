@@ -155,6 +155,9 @@ class PeerHandler {
     }
 
     reInitializeHandlersAndPeers() {
+        if(this.stream)
+            this.stream.getTracks().forEach(track => track.stop())
+
         this.peers = {}
         this.onConnectHandler = undefined
         this.onSignalHandler = undefined
