@@ -111,13 +111,11 @@ export default {
         },
         logoutUserHandler() {
             this.logoutUser()
-            debugger
             this.$router.push({ name: "login" })
         },
         updateDarkTheme() {
             localStorage.setItem("darkTheme", `${!this.darkTheme}`)
             this.darkTheme = !this.darkTheme
-            debugger
             this.$vuetify.theme.dark = this.darkTheme
         }
     },

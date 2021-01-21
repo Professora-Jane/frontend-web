@@ -60,12 +60,12 @@
             :error="createStudentClassError"
             @close="dialog=false" />
         
-        <delete-item-dialog
+        <confirm-dialog
             :active="dialogDeleteItem"
             title="Excuir aluno"
             max-width="350px"
             content="Remover um aluno também irá remover todas as suas aulas. Tem certeza que deseja continuar? Essa ação é irreversível."
-            @delete="deleteStudent"
+            @confirm="deleteStudent"
             :btn-loading="btnLoadingDeleteStudent"
             @close="dialogDeleteItem = false" />
     </div>
@@ -82,7 +82,7 @@ import Calendar from '../../components/schedule/Calendar.vue';
 import { mapState } from "vuex";
 import ButtonWithTooltip from '../../components/utils/ButtonWithTooltip.vue';
 import CreateStudentClass from '../../components/students/dialogs/CreateStudentClass.vue';
-import DeleteItemDialog from "../../components/base/dialogs/DeleteItemDialog.vue"
+import ConfirmDialog from "../../components/base/dialogs/ConfirmDialog.vue"
 
 const studentService = new StudentService();
 const teacherService = new TeacherService();
@@ -95,7 +95,7 @@ export default {
         Calendar,
         ButtonWithTooltip,
         CreateStudentClass,
-        DeleteItemDialog
+        ConfirmDialog
     },
     data() {
         return {
