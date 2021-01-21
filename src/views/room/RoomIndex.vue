@@ -95,21 +95,21 @@
                     </v-card>
                 </v-col>
             </v-row>
-            
-            <h2
-                class="mt-4 title">
-                Salas anteriores
-            </h2>
-            <div v-if="pastRooms.length">
-                <div 
-                    v-for="room in pastRooms"
-                    :key="room.id">
-                    {{ room.name }}
-                </div>
-            </div>
-            <div v-else>
-                Nenhuma sala anterior
-            </div>
+            <v-card
+                class="mt-7"
+                outlined
+                :elevation="0">
+                <v-card-title>
+                    Salas anteriores
+                </v-card-title>
+                <v-card-text>
+                    <paginated-data-table
+                        ref="dataTable"
+                        :initial-limit="5"
+                        :excluded-headers="excludedHeaders"
+                        :get-items-function="getItemsFunction" />                    
+                </v-card-text>
+            </v-card>
         </div>
 
         <create-room-dialog 
@@ -127,6 +127,7 @@ import CreateRoomDialog from '../../components/room/dialogs/CreateRoomDialog.vue
 import ButtonWithTooltip from "../../components/utils/ButtonWithTooltip.vue"
 import RoomService from "../../services/RoomService"
 import TimeCounter from "../../components/utils/TimeCounter.vue"
+import PaginatedDataTable from "../../components/utils/PaginatedDataTable.vue"
 
 const roomService = new RoomService();
 
@@ -135,7 +136,8 @@ export default {
         CardContainer,
         ButtonWithTooltip,
         CreateRoomDialog,
-        TimeCounter
+        TimeCounter,
+        PaginatedDataTable
     },
     data() {
         return {
@@ -147,7 +149,9 @@ export default {
             roomId: "",
             pastRooms: [],
             createRoomDialog: false,
-            loading: false
+            loading: false,
+            excludedHeaders: ["active", "admin", "status", "lastUpdateDate"],
+            getItemsFunction: (args) => roomService.listFinishedRooms(args),
         }
     },
     computed: {
@@ -174,17 +178,6 @@ export default {
                 this.currentRoom = undefined
             }
         },
-        async listFinishedRooms() {
-            try {
-                const response = await roomService.listFinishedRooms({ adminId: this.id })
-
-                this.pastRooms = response.data.items
-            }
-            catch(error) {
-                console.error(error)
-                this.pastRooms = []
-            }
-        },
         async startRoom() {
             try {
                 await roomService.startRoom({ roomId: this.currentRoom.id })
@@ -205,7 +198,6 @@ export default {
                 console.log(response)
 
                 await this.getCurrentRoom()
-                await this.listFinishedRooms()
 
                 this.createRoomDialog = false
 
@@ -222,9 +214,15 @@ export default {
     async created() {
         this.loading = true
         await this.getCurrentRoom()
-        await this.listFinishedRooms()
+
+        await this.$refs.dataTable
+            .setInitialArgs({ adminId: this.id })
+            .init()
+
         this.loading = false
     },
+    async mounted() {
+    }
 }
 </script>
 
