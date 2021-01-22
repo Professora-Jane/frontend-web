@@ -3,18 +3,6 @@
         width="200"
         permanent
         color="transparent">
-        <v-list-item>
-            <v-list-item-content>
-                <v-list-item-title class="title">
-                    Professor
-                </v-list-item-title>
-                <v-list-item-subtitle>
-                    TODO
-                </v-list-item-subtitle>
-            </v-list-item-content>
-        </v-list-item>
-
-        <v-divider />
         <v-list
             dense
             nav>
@@ -23,12 +11,11 @@
                 :key="item.title"
                 @click="item.handler(item.routeTo)"
                 link>
-                <v-list-item-icon>
-                    <v-icon>{{ item.icon }}</v-icon>
-                </v-list-item-icon>
-
                 <v-list-item-content>
-                    <v-list-item-title>{{ item.title }}</v-list-item-title>
+                    <div class="d-flex align-center">
+                        <v-icon class="mr-2">{{ item.icon }}</v-icon> 
+                        <v-list-item-title>{{ item.title }}</v-list-item-title>
+                    </div>
                 </v-list-item-content>
             </v-list-item>
         </v-list>
@@ -41,13 +28,13 @@ export default {
         return {
             sidebarItens: [
                 {
-                    title: "Meus alunos",
+                    title: "Alunos",
                     icon: "mdi-account-multiple",
                     routeTo: "students",
                     handler: route => this.handleSidebarItem(route)
                 },
                 {
-                    title: "Minhas aulas",
+                    title: "Agenda",
                     icon: "mdi-calendar-account",
                     routeTo: "schedule",
                     handler: route => this.handleSidebarItem(route)
