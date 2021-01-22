@@ -6,6 +6,8 @@ import vuetify from './plugins/vuetify';
 import { socketInstance } from './externalClients/websockets/socketClient';
 import { socketHandlerInstance } from './externalClients/websockets/socketHandler';
 import VueDraggableResizable from 'vue-draggable-resizable'
+import Notifications from 'vue-notification'
+
 
 socketInstance
     .initConnection({ 
@@ -18,6 +20,7 @@ socketInstance
 
 Vue.prototype.$wsEmit = (eventName, content) => socketInstance.send(eventName, content)
 
+Vue.use(Notifications)
 Vue.component('vue-draggable-resizable', VueDraggableResizable)
 
 new Vue({
