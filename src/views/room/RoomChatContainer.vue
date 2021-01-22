@@ -2,6 +2,7 @@
     <div
         class="chat-container elevation-2 ml-2 d-flex flex-column">
         <v-tabs 
+            grow
             v-model="tab">
             <v-tabs-slider />
 
@@ -79,6 +80,11 @@ export default {
         roomId: {
             type: String,
             required: true
+        },
+        autoScrollChat: {
+            required: false,
+            default: true,
+            type: Boolean
         }
     },
     components: {
@@ -124,14 +130,16 @@ export default {
             this.scrollChatoToBottom()
         },
         sendMessageToRoom() {
-            this.$wsEmit('room:chat', {
-                roomId: this.roomId,
-                participantId: this.id,
-                participantName: this.name,
-                messageContent: this.chatMessage
-            })
-
-            this.chatMessage = ""
+            if (this.chatMessage) {
+                this.$wsEmit('room:chat', {
+                    roomId: this.roomId,
+                    participantId: this.id,
+                    participantName: this.name,
+                    messageContent: this.chatMessage
+                })
+    
+                this.chatMessage = ""
+            }
         },
         startHandlers() {
             this.onReceivedMessageToken = socketHandlerInstance.on('room:chat', this.onReceivedMessage)
@@ -147,7 +155,9 @@ export default {
             return require("../../assets/images/default_user_img.png")
         },
         scrollChatoToBottom() {
-            setTimeout(() => this.divChatContent.scrollTo({ top: this.divChatContent.scrollHeight, behavior: 'smooth' }), 75)
+            if (this.autoScrollChat) {
+                setTimeout(() => this.divChatContent.scrollTo({ top: this.divChatContent.scrollHeight, behavior: 'smooth' }), 75)
+            }
         }
     },
     created() {

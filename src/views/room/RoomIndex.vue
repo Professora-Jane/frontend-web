@@ -62,6 +62,7 @@
                             <v-btn
                                 text
                                 color="warning"
+                                @click="shareRoom(currentRoom.id)"
                                 v-if="currentRoom && currentRoom.status === currentRoomOnGoingState">
                                 Finalizar sala
                             </v-btn>
@@ -127,7 +128,7 @@ import CreateRoomDialog from '../../components/room/dialogs/CreateRoomDialog.vue
 import ButtonWithTooltip from "../../components/utils/ButtonWithTooltip.vue"
 import RoomService from "../../services/RoomService"
 import TimeCounter from "../../components/utils/TimeCounter.vue"
-import PaginatedDataTable from "../../components/utils/PaginatedDataTable.vue"
+import PaginatedDataTable from "../../components/tables/PaginatedDataTable.vue"
 
 const roomService = new RoomService();
 
@@ -209,6 +210,23 @@ export default {
         },
         gotoRoom(roomId) {
             this.$router.push({ name: "roomDetail", params: { id: roomId }})
+        },
+        shareRoom() {
+            this.$notify({
+                group: 'notification-with-options',
+                title: 'Important message',
+                type: 'success',
+                text: {
+                    content: "weqwewqe",
+                    options: {
+                        success:  {
+                            text: "Ir para sala",
+                            callback: () => console.log("Indo para sala...")
+                        }
+                    }
+                },
+                duration: 30000,
+            })
         }
     },
     async created() {

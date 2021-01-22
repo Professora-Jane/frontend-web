@@ -30,12 +30,44 @@
             <button-with-tooltip
                 large
                 bottom
-                v-if="shareType"
+                v-if="shareType && roomDetails.status === currentRoomOnGoingState"
                 label="Cancelar compartilhamento"
                 btn-color="transparent"
                 :icon="shareType === 'screen' ? 'mdi-monitor-off': 'mdi-camera-off'"
                 @click="stopSharing(shareType)" />
 
+            <v-menu
+                left
+                offset-y
+                :close-on-content-click="false">
+                <template v-slot:activator="{ on, attrs }">
+                    <v-btn
+                        icon
+                        v-bind="attrs"
+                        v-on="on">
+                        <v-icon>
+                            mdi-dots-vertical
+                        </v-icon>
+                    </v-btn>
+                </template>
+                <v-list class="pa-3">
+                    <v-list-item
+                        class="px-2">
+                        <v-list-item-title>
+                            Configurações de sala
+                        </v-list-item-title>
+                    </v-list-item>
+                    <v-divider />
+                    <v-list-item
+                        class="px-2">
+                        <v-switch
+                            v-model="roomOptions.autoScroolChat"
+                            hide-details=""
+                            label="Rolar chat automaticamente" />
+                    </v-list-item>
+                </v-list>
+            </v-menu>
+            
             <button-with-tooltip
                 v-if="roomDetails.status === currentRoomOnGoingState && roomDetails.admin === id"
                 large
@@ -52,6 +84,7 @@
             </h5>
         </div>
         <div
+            style="overflow: hidden;"
             v-else-if="roomDetails.status === currentRoomOnGoingState"
             class="pa-3 h-100 d-flex flex-column">
             <div
@@ -60,9 +93,21 @@
                     id="video-container"
                     class="video-container mr-2" />
                 
-                <room-chat-container
-                    :room-id="roomId"
-                    :current-participants="currentParticipants" />
+                <div 
+                    :class="{'hide-chat': hideChat}"
+                    class="chat d-flex">
+                    <button-with-tooltip
+                        attach=".chat.d-flex"
+                        bottom
+                        @click="hideChat = !hideChat"
+                        :label="hideChat? 'Exibir chat': 'Ocultar chat' "
+                        :icon="hideChat? 'mdi-chevron-left' : 'mdi-chevron-right'" />
+                    <room-chat-container
+                        :auto-scroll-chat="roomOptions.autoScroolChat"
+                        class="w-100"
+                        :room-id="roomId"
+                        :current-participants="currentParticipants" />
+                </div>
             </div>
         </div>
 
@@ -116,7 +161,11 @@ export default {
             initTime: -1,
             loading: false,
             btnLoadingFinishingRoom: false,
-            dialogFinishRoom: false
+            dialogFinishRoom: false,
+            hideChat: false,
+            roomOptions: {
+                autoScroolChat: true
+            }
         }
     },
     computed: {
@@ -365,8 +414,18 @@ export default {
         }
     }
 
-    .chat-container {
-        width: 350px;
+    .chat {
+
+        &.hide-chat {
+            .chat-container {
+                width: 0px;
+            }
+        }
+        .chat-container {
+            transition: width 0.2s cubic-bezier(.38,.48,.23,.97);
+            width: 350px;
+        }
     }
+
 }
 </style>
