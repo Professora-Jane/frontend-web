@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "axios": "^0.21.1",
+    "canvas-free-drawing": "^2.1.0",
     "core-js": "^3.6.5",
     "pubsub-js": "^1.9.2",
     "simple-peer": "^9.9.3",
