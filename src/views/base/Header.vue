@@ -40,17 +40,6 @@
                     :user-img="userImg" />
                 <v-divider />
                 <v-list>
-                    <!-- <v-list-item
-                        class="header-list-item px-2">
-                        <v-list-item-title>
-                            <v-switch
-                                inset
-                                v-model="darkTheme"
-                                hide-details=""
-                                label="Tema escuro"
-                                @change="updateDarkTheme" />
-                        </v-list-item-title>
-                    </v-list-item> -->
                     <v-list-item
                         v-ripple
                         v-for="(item, index) in items"

@@ -1,14 +1,25 @@
 <template>
     <card-container
         id="room"
+        :key="roomDetails.id"
         :loading="loading"
         :page-title="roomDetails.name">
         <template v-slot:header>
             <time-counter
                 :off-set="3"
+                init-without-watch
                 :init-time="roomDetails.startTime" />
 
             <v-spacer />
+            <button-with-tooltip
+                large
+                bottom
+                v-if="roomDetails.admin === id && roomDetails.status === currentRoomOnGoingState"
+                :label="isCanvasEnabled? 'Desabilitar quadro' : 'Habilitar quadro'"
+                btn-color="transparent"
+                :icon="isCanvasEnabled? 'mdi-image-remove': 'mdi-image'"
+                @click="shareOrDisableCanvas" />
+
             <button-with-tooltip
                 large
                 bottom
@@ -91,8 +102,13 @@
                 class="d-flex h-100">
                 <div
                     id="video-container"
-                    class="video-container mr-2" />
-                
+                    class="video-container mr-2">
+                    <drawing-canvas
+                        ref="drawingCanvas"
+                        :is-canvas-admin="roomDetails.admin === id"
+                        @canvasData="shareCanvasData"
+                        v-if="isCanvasEnabled" />
+                </div>
                 <div 
                     :class="{'hide-chat': hideChat}"
                     class="chat d-flex">
@@ -127,6 +143,7 @@ import { mapState } from "vuex"
 import CardContainer from "../../components/base/CardContainer.vue"
 import ButtonWithTooltip from "../../components/utils/ButtonWithTooltip.vue"
 import ConfirmDialog from "../../components/base/dialogs/ConfirmDialog.vue"
+import DrawingCanvas from "../../components/drawing/DrawingCanvas.vue"
 import RoomChatContainer from "./RoomChatContainer.vue"
 import TimeCounter from "../../components/utils/TimeCounter.vue"
 import { socketHandlerInstance } from "../../externalClients/websockets/socketHandler"
@@ -142,16 +159,21 @@ export default {
         ButtonWithTooltip,
         TimeCounter,
         RoomChatContainer,
-        ConfirmDialog
+        ConfirmDialog,
+        DrawingCanvas
     },
     data() {
         return {
+            onParticipantJoinToken: undefined,
             onParticipantLeaveToken: undefined,
             onReceivedPeerOfferToken: undefined,
             onFinishRoomToken: undefined,
+            onCanvasToken: undefined,
+            onCanvasDataToken: undefined,
             roomDetails: {
                 name: "",
-                startTime: ""
+                startTime: "",
+                id: 1
             },
             roomId: undefined,
             videoGrid: undefined,
@@ -163,6 +185,7 @@ export default {
             btnLoadingFinishingRoom: false,
             dialogFinishRoom: false,
             hideChat: false,
+            isCanvasEnabled: false,
             roomOptions: {
                 autoScroolChat: true
             }
@@ -178,6 +201,20 @@ export default {
         },
     },
     methods: {
+        shareOrDisableCanvas() {
+            this.$wsEmit("room:canvas", {
+                roomId: this.roomId,
+                canvasStatus: !this.isCanvasEnabled
+            })
+        },
+        shareCanvasData({ data, to = undefined }) {
+            if (this.id === this.roomDetails.admin)
+                this.$wsEmit("room:canvasData", {
+                    roomId: this.roomId,
+                    data,
+                    to
+                })
+        },
         getInitiator(peer) {
             if (this.id === this.roomDetails.admin)
                 return true
@@ -185,6 +222,14 @@ export default {
                 return false
             else 
                 return !this.currentParticipants.map(item => item.id).filter(id => id !== this.lastPeer).includes(peer)
+        },
+        onCanvas({ canvasStatus }) {
+            this.isCanvasEnabled = canvasStatus
+        },
+        onCanvasData({ data }) {
+            if (this.id !== this.roomDetails.admin) {
+                this.$refs.drawingCanvas.restoreData(data)
+            }
         },
         onReceivedPeerOffer({ offer, participantId }) {
             if (offer) {
@@ -197,15 +242,20 @@ export default {
         onParticipantJoin(content) {
             this.currentParticipants = content.currentParticipants
 
-            if (content.user.id !== this.roomDetails.admin && content.user.id !== this.id)
+            if (content.user.id !== this.roomDetails.admin && content.user.id !== this.id) {
                 this.lastPeer = content.user.id
 
+                if (this.roomDetails.admin === this.id && this.isCanvasEnabled) {
+                    this.shareCanvasData({ data: this.$refs.drawingCanvas.getData() })
+                }
+            }
             if (content.user.id !== this.id) {
                 this.lastPeer = content.user.id
                 peerHandlerInstance.initPeerConnection({ peerId: content.user.id })
             }
             else {
                 this.loading = false
+                this.initCurrentPeers()
             }
         },
         async onFinishRoom() {
@@ -217,6 +267,13 @@ export default {
             peerHandlerInstance.destroyPeer({ peerId: content.user.id})
         },
         leavingRoom() {
+            if (this.id === this.roomDetails.admin) {
+                this.$wsEmit("room:canvas", {
+                    roomId: this.roomId,
+                    canvasStatus: false
+                })
+            }
+
             this.$wsEmit('room:leave', {
                 roomId: this.roomId,
                 participantId: this.id
@@ -235,6 +292,7 @@ export default {
                 this.roomDetails = response.data
 
                 this.currentParticipants = response.data?.details?.currentParticipants
+                this.isCanvasEnabled = response.data?.details?.canvasStatus
             }
             catch(error) {
                 console.error(error)
@@ -298,21 +356,32 @@ export default {
 
             this.shareType = type
         },
+        initCurrentPeers() {
+            if (this.roomDetails.details.currentParticipants.length) {
+                this.roomDetails.details.currentParticipants.map(item => {
+                    if (item.id != this.id)
+                        peerHandlerInstance.initPeerConnection({ peerId: item.id })
+                })
+            }
+        },
         startHandlers() {
             this.onParticipantLeaveToken = socketHandlerInstance.on('room:participantLeave', this.onParticipantLeave)
             this.onParticipantJoinToken = socketHandlerInstance.on('room:participantJoin', this.onParticipantJoin)
             this.onReceivedPeerOfferToken = socketHandlerInstance.on('room:peerOffer', this.onReceivedPeerOffer)
             this.onFinishRoomToken = socketHandlerInstance.on('room:finish', this.onFinishRoom)
-            window.addEventListener('beforeunload', this.leavingRoom)
+            this.onCanvasDataToken = socketHandlerInstance.on('room:canvasData', this.onCanvasData)
+            this.onCanvasToken = socketHandlerInstance.on('room:canvas', this.onCanvas)
+            window.addEventListener('beforeunload', this.leavingRoomHandlers)
         },
         leavingRoomHandlers() {
+            this.leavingRoom()
             peerHandlerInstance.reInitializeHandlersAndPeers()
-            window.removeEventListener("beforeunload", this.leavingRoom)
             socketHandlerInstance.off(this.onReceivedPeerOfferToken)
             socketHandlerInstance.off(this.onParticipantLeaveToken)
             socketHandlerInstance.off(this.onParticipantJoinToken)
             socketHandlerInstance.off(this.onFinishRoomToken)
-            this.leavingRoom()
+            socketHandlerInstance.off(this.onCanvasDataToken)
+            socketHandlerInstance.off(this.onCanvasToken)
         },
     },
     async created() {
@@ -320,7 +389,6 @@ export default {
     },
     async mounted() {
         this.loading = true
-        
         await this.getRoomDetails()
 
         if (this.roomDetails.status === "criado") {
@@ -374,11 +442,8 @@ export default {
 
             this.videoGrid = document.getElementById("video-container")
 
-            if (this.roomDetails.details.currentParticipants.length) {
-                this.roomDetails.details.currentParticipants.map(item => {
-                    if (item.id != this.id)
-                        peerHandlerInstance.initPeerConnection({ peerId: item.id })
-                })
+            if (this.id !== this.roomDetails.id) {
+                this.initCurrentPeers()
             }
 
             this.$wsEmit('room:join', {
@@ -403,13 +468,10 @@ export default {
 
     .video-container {
         width: 100%;
-        display: grid;
-        grid-template-columns: repeat(auto-fill, 400px);
-        grid-auto-rows: 300px;
 
         video {
-            width: 100%;
-            height: 100%;
+            width: 400px;
+            height: 300px;
             object-fit: cover;
         }
     }
