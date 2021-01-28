@@ -9,8 +9,11 @@ class SocketHandler {
         pubsub.publish(type, [content, send])
     }
 
-    on(ev, cb) {
-        return pubsub.subscribe(ev, async (_, value) => await cb(...value))
+    on(ev, cb, thisCtx) {
+        if (thisCtx)
+            cb = cb.bind(thisCtx)
+        
+        return pubsub.subscribe(ev, (_, value) => cb(...value))
     }
 
     off(token) {
