@@ -106,7 +106,7 @@
                 <v-card-text>
                     <paginated-data-table
                         ref="dataTable"
-                        :initial-limit="5"
+                        :initial-limit="20"
                         :excluded-headers="excludedHeaders"
                         :get-items-function="getItemsFunction" />                    
                 </v-card-text>

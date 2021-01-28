@@ -12,6 +12,7 @@
             @update:sort-by="updateSortBy"
             @update:sort-desc="updateSort"
             hide-default-footer
+            :items-per-page="limit"
             :disable-sort="!enableSort"
             :headers="header.length && header || customHeader"
             :items="items"
