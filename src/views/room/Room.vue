@@ -146,9 +146,16 @@ import ConfirmDialog from "../../components/base/dialogs/ConfirmDialog.vue"
 import DrawingCanvas from "../../components/drawing/DrawingCanvas.vue"
 import RoomChatContainer from "./RoomChatContainer.vue"
 import TimeCounter from "../../components/utils/TimeCounter.vue"
-import { socketHandlerInstance } from "../../externalClients/websockets/socketHandler"
 import RoomService from '../../services/RoomService'
 import { peerHandlerInstance } from "../../externalClients/peer/PeerHandler"
+import { 
+    ROOM_CANVAS,
+    ROOM_CANVAS_DATA,
+    ROOM_FINISH,
+    ROOM_PARTICIPANT_JOIN,
+    ROOM_PARTICIPANT_LEAVE,
+    ROOM_PEER_OFFER
+} from '../../externalClients/websockets/eventTopics'
 
 
 const roomService = new RoomService();
@@ -164,12 +171,6 @@ export default {
     },
     data() {
         return {
-            onParticipantJoinToken: undefined,
-            onParticipantLeaveToken: undefined,
-            onReceivedPeerOfferToken: undefined,
-            onFinishRoomToken: undefined,
-            onCanvasToken: undefined,
-            onCanvasDataToken: undefined,
             roomDetails: {
                 name: "",
                 startTime: "",
@@ -222,49 +223,6 @@ export default {
                 return false
             else 
                 return !this.currentParticipants.map(item => item.id).filter(id => id !== this.lastPeer).includes(peer)
-        },
-        onCanvas({ canvasStatus }) {
-            this.isCanvasEnabled = canvasStatus
-        },
-        onCanvasData({ data }) {
-            if (this.id !== this.roomDetails.admin) {
-                this.$refs.drawingCanvas.restoreData(data)
-            }
-        },
-        onReceivedPeerOffer({ offer, participantId }) {
-            if (offer) {
-                peerHandlerInstance.signalPeer({ 
-                    peerId: participantId,
-                    data: offer
-                })
-            }
-        },
-        onParticipantJoin(content) {
-            this.currentParticipants = content.currentParticipants
-
-            if (content.user.id !== this.roomDetails.admin && content.user.id !== this.id) {
-                this.lastPeer = content.user.id
-
-                if (this.roomDetails.admin === this.id && this.isCanvasEnabled) {
-                    this.shareCanvasData({ data: this.$refs.drawingCanvas.getData() })
-                }
-            }
-            if (content.user.id !== this.id) {
-                this.lastPeer = content.user.id
-                peerHandlerInstance.initPeerConnection({ peerId: content.user.id })
-            }
-            else {
-                this.loading = false
-                this.initCurrentPeers()
-            }
-        },
-        async onFinishRoom() {
-            this.$router.push({ name: "room"})
-        },
-        onParticipantLeave(content) {
-            this.currentParticipants = content.currentParticipants
-
-            peerHandlerInstance.destroyPeer({ peerId: content.user.id})
         },
         leavingRoom() {
             if (this.id === this.roomDetails.admin) {
@@ -364,28 +322,10 @@ export default {
                 })
             }
         },
-        startHandlers() {
-            this.onParticipantLeaveToken = socketHandlerInstance.on('room:participantLeave', this.onParticipantLeave)
-            this.onParticipantJoinToken = socketHandlerInstance.on('room:participantJoin', this.onParticipantJoin)
-            this.onReceivedPeerOfferToken = socketHandlerInstance.on('room:peerOffer', this.onReceivedPeerOffer)
-            this.onFinishRoomToken = socketHandlerInstance.on('room:finish', this.onFinishRoom)
-            this.onCanvasDataToken = socketHandlerInstance.on('room:canvasData', this.onCanvasData)
-            this.onCanvasToken = socketHandlerInstance.on('room:canvas', this.onCanvas)
-            window.addEventListener('beforeunload', this.leavingRoomHandlers)
-        },
-        leavingRoomHandlers() {
-            this.leavingRoom()
-            peerHandlerInstance.reInitializeHandlersAndPeers()
-            socketHandlerInstance.off(this.onReceivedPeerOfferToken)
-            socketHandlerInstance.off(this.onParticipantLeaveToken)
-            socketHandlerInstance.off(this.onParticipantJoinToken)
-            socketHandlerInstance.off(this.onFinishRoomToken)
-            socketHandlerInstance.off(this.onCanvasDataToken)
-            socketHandlerInstance.off(this.onCanvasToken)
-        },
     },
     async created() {
         this.roomId = this.$route.params.id
+        window.addEventListener('beforeunload', this.leavingRoom)
     },
     async mounted() {
         this.loading = true
@@ -395,7 +335,6 @@ export default {
             this.$router.push({ name: "room" })
         }
         else if (this.roomDetails.status === this.currentRoomOnGoingState) {
-            this.startHandlers()
             
             peerHandlerInstance
                 .registerOnSignalHandler((data,peerId) => {
@@ -457,8 +396,57 @@ export default {
         }
     },
     beforeDestroy() {
-        this.leavingRoomHandlers()
+        this.leavingRoom()
     },
+    socketHandlers: {
+        [ROOM_PARTICIPANT_LEAVE](content) {
+            this.currentParticipants = content.currentParticipants
+            peerHandlerInstance.destroyPeer({ peerId: content.user.id})
+        },
+
+        [ROOM_PARTICIPANT_JOIN](content) {
+            this.currentParticipants = content.currentParticipants
+
+            if (content.user.id !== this.roomDetails.admin && content.user.id !== this.id) {
+                this.lastPeer = content.user.id
+
+                if (this.roomDetails.admin === this.id && this.isCanvasEnabled) {
+                    this.shareCanvasData({ data: this.$refs.drawingCanvas.getData() })
+                }
+            }
+            if (content.user.id !== this.id) {
+                this.lastPeer = content.user.id
+                peerHandlerInstance.initPeerConnection({ peerId: content.user.id })
+            }
+            else {
+                this.loading = false
+                this.initCurrentPeers()
+            }
+        },
+
+        [ROOM_PEER_OFFER]({ offer, participantId }) {
+            if (offer) {
+                peerHandlerInstance.signalPeer({ 
+                    peerId: participantId,
+                    data: offer
+                })
+            }
+        },
+
+        [ROOM_FINISH]() {
+            this.$router.push({ name: "room"})
+        },
+        
+        [ROOM_CANVAS_DATA]({ data }) {
+            if (this.id !== this.roomDetails.admin) {
+                this.$refs.drawingCanvas.restoreData(data)
+            }
+        },
+        
+        [ROOM_CANVAS]({ canvasStatus }) {
+            this.isCanvasEnabled = canvasStatus
+        },
+    }
 }
 </script>
 

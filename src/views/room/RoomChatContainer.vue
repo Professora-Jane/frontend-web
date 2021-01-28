@@ -66,9 +66,13 @@
 </template>
 
 <script>
-import { mapState } from 'vuex'
-import UserProfileCard from '../../components/utils/UserProfileCard.vue'
-import { socketHandlerInstance } from '../../externalClients/websockets/socketHandler'
+import { mapState } from 'vuex';
+import UserProfileCard from '../../components/utils/UserProfileCard.vue';
+import {
+    ROOM_CHAT,
+    ROOM_PARTICIPANT_JOIN,
+    ROOM_PARTICIPANT_LEAVE
+} from "../../externalClients/websockets/eventTopics";
 
 export default {
     props: {
@@ -92,9 +96,6 @@ export default {
     },
     data() {
         return {
-            onReceivedMessageToken: undefined,
-            onParticipantJoinToken: undefined,
-            onParticipantLeaveToken: undefined,
             chatMessage: "",
             chatMessages: [],
             tab: "mensagens",
@@ -106,29 +107,6 @@ export default {
         ...mapState("authUser", [ 'id', 'name' ])
     },
     methods: {
-        onReceivedMessage(content) {
-            this.chatMessages.push(content)
-            this.scrollChatoToBottom()
-        },
-        onParticipantJoin(content) {
-            this.chatMessages.push({
-                senderid: content.user.id,
-                name: content.user.name,
-                content: content.user.id === this.id? "Você entrou na sala" : content.user.name + " se juntou à sala",
-                type: "join"
-            })
-            this.scrollChatoToBottom()
-        },
-        onParticipantLeave(content) {
-
-            this.chatMessages.push({
-                senderid: content.user.id,
-                name: content.user.name,
-                content: content.user.name + " saiu da sala",
-                type: "leave"
-            })
-            this.scrollChatoToBottom()
-        },
         sendMessageToRoom() {
             if (this.chatMessage) {
                 this.$wsEmit('room:chat', {
@@ -141,16 +119,6 @@ export default {
                 this.chatMessage = ""
             }
         },
-        startHandlers() {
-            this.onReceivedMessageToken = socketHandlerInstance.on('room:chat', this.onReceivedMessage)
-            this.onParticipantJoinToken = socketHandlerInstance.on('room:participantJoin', this.onParticipantJoin)
-            this.onParticipantLeaveToken = socketHandlerInstance.on('room:participantLeave', this.onParticipantLeave)
-        },
-        leavingRoomHandlers() {
-            socketHandlerInstance.off(this.onReceivedMessageToken)
-            socketHandlerInstance.off(this.onParticipantJoinToken)
-            socketHandlerInstance.off(this.onParticipantLeaveToken)
-        },
         async getUserImagePhoto() {
             return require("../../assets/images/default_user_img.png")
         },
@@ -161,7 +129,6 @@ export default {
         }
     },
     created() {
-        this.startHandlers()
         this.participants = [...this.currentParticipants]
     },
     mounted() {
@@ -170,8 +137,32 @@ export default {
         const chatContainerSendAreaHeight = document.querySelector(".chat-container__content .chat-send").offsetHeight
         this.divChatContent.style.maxHeight = ((chatContainerHeight - chatContainerSendAreaHeight) - 10) + "px"
     },
-    beforeDestroy() {
-        this.leavingRoomHandlers()
+    socketHandlers: {
+        [ROOM_CHAT](content) {
+            this.chatMessages.push(content)
+            this.scrollChatoToBottom()
+        },
+
+        [ROOM_PARTICIPANT_JOIN](content) {
+            this.chatMessages.push({
+                senderid: content.user.id,
+                name: content.user.name,
+                content: content.user.id === this.id? "Você entrou na sala" : content.user.name + " se juntou à sala",
+                type: "join"
+            })
+
+            this.scrollChatoToBottom()
+        },
+        
+        [ROOM_PARTICIPANT_LEAVE](content) {
+            this.chatMessages.push({
+                senderid: content.user.id,
+                name: content.user.name,
+                content: content.user.name + " saiu da sala",
+                type: "leave"
+            })
+            this.scrollChatoToBottom()
+        }
     },
     watch: {
         currentParticipants: function(val) {
