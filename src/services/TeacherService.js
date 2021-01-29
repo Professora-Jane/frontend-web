@@ -11,10 +11,22 @@ export default class TeacherService {
     /**
      * 
      * @param { object } params
+     * @param { string } params.id - Id doprofessor
+     */
+    async getTeacherById({ id }) {
+
+        const response = await this.client.get(`/teacher/${id}`)
+
+        return response
+    }
+
+    /**
+     * 
+     * @param { object } params
      * @param { string } params.name - Nome do professor
-     * @param { string } params.name - Email do professor
-     * @param { string } params.name - Senha do professor
-     * @param { string } params.name - Confirmação de senha do professor
+     * @param { string } params.email - Email do professor
+     * @param { string } params.password - Senha do professor
+     * @param { string } params.repeatedPassword - Confirmação de senha do professor
      */
     async createTeacher({ name, email, password, repeatedPassword }) {
 
