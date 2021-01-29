@@ -2,7 +2,7 @@
     <div
         id="box-create-teacher">
         <div class="box-logo">
-            <img :src="logo" />
+            <img :src="logo">
         </div>
         
         <div
@@ -11,6 +11,7 @@
                 Cadastrar estudante
             </h2>
             <v-form
+                ref="form"
                 lazy-validation>
                 <v-text-field 
                     v-model="name"
@@ -41,6 +42,7 @@
                     label="Repita a senha" />
 
                 <v-btn
+                    @click="registerStudent"
                     class="bg-primary-dark mt-2"
                     depressed
                     block>
@@ -72,6 +74,10 @@
 </template>
 
 <script>
+import StudentService from '../../../services/StudentService'
+
+const studentService = new StudentService();
+
 export default {
     data() {
         return {
@@ -96,6 +102,24 @@ export default {
     methods: {
         routeTo(params) {
             this.$router.push(params)
+        },
+        async registerStudent() {
+            if (this.$refs.form.validate()) {
+                try {
+                    await studentService.createStudent({
+                        name: this.name,
+                        cellPhone: this.cellPhone,
+                        email: this.email,
+                        password: this.password,
+                        repeatedPassword: this.repeatPassword
+                    })
+
+                    this.routeTo({ name: "login", query: { type: "aluno" }})
+                }
+                catch(error) {
+                    console.error(error)
+                }
+            }
         }
     }
 }

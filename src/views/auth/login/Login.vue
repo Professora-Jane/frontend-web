@@ -103,7 +103,7 @@ export default {
             emailRules: [
                 v => /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v) || 'E-mail deve ser válido'
             ],
-            type: "professor",
+            type: undefined,
             types: [
                 { name: "Professor", id: "professor" },
                 { name: "Aluno", id: "aluno" },
@@ -129,8 +129,7 @@ export default {
                         type: this.type
                     })
 
-                    
-                    this.routeTo({ name: "schedule"})
+                    this.routeTo({ name: "home" })
                 }
                 catch(error) {
                     console.error(error)
@@ -139,7 +138,7 @@ export default {
         }
     },
     created() {
-        this.type = this.$route.query.type
+        this.type = this.$route.query.type || "professor"
     }
 }
 </script>

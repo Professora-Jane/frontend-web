@@ -110,7 +110,7 @@ export default {
                         repeatedPassword: this.repeatPassword
                     })
 
-                    this.$router.push({ name: "login" })
+                    this.$router.push({ name: "login", query: { type: "professor" }})
                 }
                 catch(error) {
                     alert(error)
