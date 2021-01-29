@@ -1,10 +1,11 @@
 <template>
     <div id="base-component">
-        <BaseHeader />
+        <base-header />
         <v-main>
             <v-container
                 id="wrapper">
-                <Sidebar />
+                <sidebar
+                    @studentClassRoom="goToRoomDialog = true" />
                 <div 
                     class="px-5 content">
                     <v-fade-transition 
@@ -14,17 +15,38 @@
                 </div>
             </v-container>
         </v-main>
+        <go-to-room-dialog
+            max-width="350px"
+            :active="goToRoomDialog"
+            @confirm="goToRoom"
+            @close="goToRoomDialog = false" />
     </div>
 </template>
 
 <script>
+import GoToRoomDialog from '../../components/room/dialogs/GoToRoomDialog.vue'
 import Header from "./Header.vue"
-import Sidebar from "./Sidebar"
+import Sidebar from './Sidebar.vue'
 
 export default {
     components: {
         BaseHeader: Header,
-        Sidebar
+        Sidebar,
+        GoToRoomDialog
+    },
+    data() {
+        return {
+            goToRoomDialog: false
+        }
+    },
+    methods: {
+        routeTo(params) {
+            this.$router.push(params)
+                .then(() => this.goToRoomDialog = false)
+        },
+        goToRoom({ roomId }) {
+            this.routeTo({ name: "roomDetail", params: { id: roomId }})
+        }
     }
 }
 </script>
