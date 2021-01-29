@@ -72,17 +72,17 @@
 </template>
 
 <script>
-import StudentService from '../../services/StudentService';
-import TeacherService from '../../services/TeacherService';
-import DisciplineService from '../../services/DisciplineService';
-import ClassService from '../../services/ClassService';
+import StudentService from '../../../services/StudentService';
+import TeacherService from '../../../services/TeacherService';
+import DisciplineService from '../../../services/DisciplineService';
+import ClassService from '../../../services/ClassService';
 
-import CardContainer from '../../components/base/CardContainer.vue';
-import Calendar from '../../components/schedule/Calendar.vue';
+import CardContainer from '../../../components/base/CardContainer.vue';
+import Calendar from '../../../components/schedule/Calendar.vue';
 import { mapState } from "vuex";
-import ButtonWithTooltip from '../../components/utils/ButtonWithTooltip.vue';
-import CreateStudentClass from '../../components/students/dialogs/CreateStudentClass.vue';
-import ConfirmDialog from "../../components/base/dialogs/ConfirmDialog.vue"
+import ButtonWithTooltip from '../../../components/utils/ButtonWithTooltip.vue';
+import CreateStudentClass from '../../../components/students/dialogs/CreateStudentClass.vue';
+import ConfirmDialog from "../../../components/base/dialogs/ConfirmDialog.vue"
 
 const studentService = new StudentService();
 const teacherService = new TeacherService();
@@ -120,7 +120,7 @@ export default {
     },
     computed: {
         defaultImg() {
-            return require("../../assets/images/default_user_img.png")
+            return require("../../../assets/images/default_user_img.png")
         },
         ...mapState("authUser", [ "id" ])
     },

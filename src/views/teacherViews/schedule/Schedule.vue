@@ -32,14 +32,14 @@
 
 <script>
 import { mapState } from "vuex"
-import TeacherService from "../../services/TeacherService"
-import CardContainer from "../../components/base/CardContainer.vue"
-import ButtonWithTooltip from "../../components/utils/ButtonWithTooltip.vue"
-import CreateStudentClass from "../../components/students/dialogs/CreateStudentClass.vue"
-import Calendar from "../../components/schedule/Calendar.vue"
-import DisciplineService from '../../services/DisciplineService'
-import StudentService from '../../services/StudentService'
-import ClassService from '../../services/ClassService'
+import TeacherService from "@/services/TeacherService"
+import CardContainer from "@/components/base/CardContainer.vue"
+import ButtonWithTooltip from "@/components/utils/ButtonWithTooltip.vue"
+import CreateStudentClass from "@/components/students/dialogs/CreateStudentClass.vue"
+import Calendar from "@/components/schedule/Calendar.vue"
+import DisciplineService from '@/services/DisciplineService'
+import StudentService from '@/services/StudentService'
+import ClassService from '@/services/ClassService'
 
 const teacherService = new TeacherService();
 const disciplinesService = new DisciplineService();

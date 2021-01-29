@@ -1,6 +1,7 @@
 <template>
     <card-container
-        id="studentds"
+        id="students"
+        :loading="loading"
         :page-title="`Meus alunos (${ students.length })`">
         <template v-slot:header>
             <v-spacer />
@@ -20,7 +21,7 @@
                 @click="dialog=true" />
         </template>
         <div class="students-area">
-            <student-card
+            <person-card
                 @click="handleStudent"
                 class="ma-2 pa-2"
                 v-for="(student, index) in students"
@@ -38,20 +39,20 @@
 </template>
 
 <script>
-import StudentCard from "../../components/students/StudentCard.vue"
-import StudentService from "../../services/StudentService";
+import PersonCard from "../../../components/utils/PersonCard.vue"
+import StudentService from "../../../services/StudentService";
 import { mapState, mapActions } from "vuex"
-import CardContainer from '../../components/base/CardContainer.vue';
-import ButtonWithTooltip from '../../components/utils/ButtonWithTooltip.vue';
-import CreateTeacherStudentDialog from '../../components/students/dialogs/CreateTeacherStudentDialog.vue';
-import TeacherService from '../../services/TeacherService';
+import CardContainer from '../../../components/base/CardContainer.vue';
+import ButtonWithTooltip from '../../../components/utils/ButtonWithTooltip.vue';
+import CreateTeacherStudentDialog from '../../../components/students/dialogs/CreateTeacherStudentDialog.vue';
+import TeacherService from '../../../services/TeacherService';
 
 const studentService = new StudentService();
 const teacherService = new TeacherService();
 
 export default {
     components: {
-        StudentCard,
+        PersonCard,
         CardContainer,
         ButtonWithTooltip,
         CreateTeacherStudentDialog
@@ -61,6 +62,7 @@ export default {
             btnLoading: false,
             dialog: false,
             show: false,
+            loading: false,
             page: 1,
             limit: 20, 
             search: "",
@@ -82,6 +84,7 @@ export default {
             this.$router.push({ name: "studentDetails", params: { id }})
         },
         async listStudentsByTeacherId({ teacherId }) {
+            this.loading = true
             try {
                 const response = await studentService.listStudentsByTeacherId({
                     page: this.page,
@@ -99,6 +102,7 @@ export default {
 
                 throw error
             }
+            this.loading = false
         },
         async createTeacherStudent({ studentEmail }) {
             this.btnLoading = true
