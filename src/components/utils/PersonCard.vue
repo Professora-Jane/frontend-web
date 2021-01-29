@@ -1,20 +1,20 @@
 <template>
     <div
         v-ripple
-        @click="handleStudent"
-        class="student-item">
+        @click="handleClick"
+        class="person-item">
         <v-img
-            class="student-item_img elevation-1"
+            class="person-item_img elevation-1"
             :src="userImg || defaultImg" />
         <p 
             v-if="name"
-            class="student-item__title">
+            class="person-item__title">
             {{ name }}
         </p>
 
         <p 
             v-if="email"
-            class="student-item__subtitle">
+            class="person-item__subtitle">
             {{ email }}
         </p>
     </div>
@@ -47,7 +47,7 @@ export default {
         }
     },
     methods: {
-        handleStudent() {
+        handleClick() {
             this.$emit("click", { id: this.id })
         }
     }
@@ -55,7 +55,7 @@ export default {
 </script>
 
 <style lang="scss">
-.student-item {
+.person-item {
     width: 180px;
     border-radius: 10px;
     cursor: pointer;
@@ -65,14 +65,14 @@ export default {
         background-color: $bg-default;
     }
 
-    .student-item_img {
+    .person-item_img {
         height: 100px;
         width: 100px;
         border-radius: 50%;
         margin: auto;
     }
 
-    .student-item__title {
+    .person-item__title {
         color: $c-primary;
         margin-top: 10px;
         margin-bottom: 0;
@@ -80,7 +80,7 @@ export default {
         text-align: center;
     }
 
-    .student-item__subtitle {
+    .person-item__subtitle {
         color: $c-gray-3;
         font-size: 14px;
         text-align: center;
