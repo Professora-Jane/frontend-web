@@ -14,7 +14,7 @@
         :first-interval="firstInterval"
         @mouseenter:event="highlightClass"
         @mouseleave:event="unhighlightClass"
-        :interval-count="$attrs['interval-count'] || 17">
+        :interval-count="$attrs['interval-count'] || 15">
         <template v-slot:day-body="{ date, week }">
             <div
                 class="v-current-time"
@@ -46,7 +46,7 @@ export default {
             type: 'week',
             mode: 'stack',
             weekday: [0, 1, 2, 3, 4, 5, 6],
-            firstInterval: 6,
+            firstInterval: 7,
             updatedEvents: []
         }
     },

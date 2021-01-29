@@ -44,7 +44,6 @@ export default {
 .card-container {
     border-radius: 8px !important;
     position: relative;
-
     &.v-card {
         display: flex;
         flex-direction: column;
@@ -53,6 +52,7 @@ export default {
 
     .card-container__title {
         background-color: $bg-light !important;
+        border-radius: 8px 8px 0px 0px;
     }
 }
 </style>
