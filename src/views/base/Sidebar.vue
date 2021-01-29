@@ -6,23 +6,30 @@
         <v-list
             dense
             nav>
-            <v-list-item
-                v-for="item in sidebarItens"
-                :key="item.title"
-                @click="item.handler(item.routeTo)"
-                link>
-                <v-list-item-content>
-                    <div class="d-flex align-center">
-                        <v-icon class="mr-2">{{ item.icon }}</v-icon> 
-                        <v-list-item-title>{{ item.title }}</v-list-item-title>
-                    </div>
-                </v-list-item-content>
-            </v-list-item>
+            <template
+                v-for="(item, index) in sidebarItens">
+                <v-list-item
+                    :key="index"
+                    v-if="userHasPermission(item.requiredUserType)"
+                    @click="item.handler"
+                    link>
+                    <v-list-item-content>
+                        <div class="d-flex align-center">
+                            <v-icon 
+                                class="mr-2">
+                                {{ item.icon }}
+                            </v-icon> 
+                            <v-list-item-title>{{ item.title }}</v-list-item-title>
+                        </div>
+                    </v-list-item-content>
+                </v-list-item>
+            </template>
         </v-list>
     </v-navigation-drawer>
 </template>
 
 <script>
+import { mapState } from 'vuex'
 export default {
     data() {
         return {
@@ -30,27 +37,51 @@ export default {
                 {
                     title: "Alunos",
                     icon: "mdi-account-multiple",
-                    routeTo: "students",
-                    handler: route => this.handleSidebarItem(route)
+                    handler: () => this.handleSidebarItem("students"),
+                    requiredUserType: ["professor"]
                 },
                 {
                     title: "Agenda",
                     icon: "mdi-calendar-account",
-                    routeTo: "schedule",
-                    handler: route => this.handleSidebarItem(route)
+                    handler: () => this.handleSidebarItem("schedule"),
+                    requiredUserType: ["professor"]
                 },
                 {
                     title: "Sala de aula",
                     icon: "mdi-google-classroom",
-                    routeTo: "room",
-                    handler: route => this.handleSidebarItem(route)
+                    handler: () => this.handleSidebarItem("room"),
+                    requiredUserType: ["professor"]
+                },
+                {
+                    title: "Professores",
+                    icon: "mdi-account-multiple",
+                    handler: () => this.handleSidebarItem("studentTeachers"),
+                    requiredUserType: ["aluno"]
+                },
+                {
+                    title: "Agenda",
+                    icon: "mdi-calendar-account",
+                    handler: () => this.handleSidebarItem("studentSchedule"),
+                    requiredUserType: ["aluno"]
+                },
+                {
+                    title: "Entrar em aula",
+                    icon: "mdi-google-classroom",
+                    handler: () => this.$emit("studentClassRoom"),
+                    requiredUserType: ["aluno"]
                 },
             ]
         }
     },
+    computed: {
+        ...mapState("authUser", [ "type" ])
+    },
     methods: {
         handleSidebarItem(route) {
             this.$router.push({ name: route }).catch(() => ({}))
+        },
+        userHasPermission(necessaryPermissions) {
+            return necessaryPermissions.includes(this.type)
         }
     }
 }
